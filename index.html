@@ -1,0 +1,198 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Microscope Simulation</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 0;
+      background-color: #f5f5f5;
+      text-align: center;
+    }
+    section {
+      display: none;
+      padding: 20px;
+    }
+    section.active {
+      display: block;
+    }
+    #start-button {
+      margin-top: 20px;
+      padding: 15px 25px;
+      font-size: 1.2em;
+      border: none;
+      border-radius: 10px;
+      background-color: purple;
+      color: white;
+      cursor: pointer;
+    }
+    #viewer-container {
+      width: 100%;
+      height: 500px;
+      background-color: #000;
+    }
+    #lens-buttons button {
+      padding: 10px 15px;
+      margin: 0 10px;
+      border: none;
+      background-color: #2196F3;
+      color: white;
+      border-radius: 6px;
+      font-weight: bold;
+      cursor: pointer;
+    }
+    #field-container {
+      position: relative;
+      width: 90vmin;
+      height: 90vmin;
+      margin: 20px auto;
+    }
+    #fov-mask {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      border-radius: 50%;
+      overflow: hidden;
+      border: 8px solid black;
+      box-sizing: border-box;
+      z-index: 2;
+    }
+    #specimenVideo {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      z-index: 1;
+    }
+    .knob-panel {
+      position: absolute;
+      width: 50px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      z-index: 3;
+    }
+    .knob-panel button {
+      width: 40px;
+      height: 40px;
+      margin: 5px;
+      border-radius: 50%;
+      border: none;
+      background-color: #2196F3;
+      color: white;
+      font-size: 1.2em;
+      cursor: pointer;
+    }
+    #fine-knob {
+      left: 10px;
+      top: 50%;
+      transform: translateY(-50%);
+    }
+    #coarse-knob {
+      right: 10px;
+      top: 50%;
+      transform: translateY(-50%);
+    }
+    #magnification {
+      margin-top: 20px;
+      font-size: 1.2em;
+      font-weight: bold;
+      background-color: #2196F3;
+      color: white;
+      padding: 10px;
+      border-radius: 6px;
+    }
+  </style>
+</head>
+<body>
+
+<!-- Phase 1: 3D Model Display -->
+<section id="phase1" class="active">
+  <h1>Virtual Microscope</h1>
+  <div id="viewer-container">
+    <!-- Placeholder for 3D model viewer -->
+    <p style="color:white; padding-top: 200px;">[3D Microscope Model Placeholder]</p>
+  </div>
+  <button id="start-button" onclick="switchPhase()">Tap to View Onion Cell Under Microscope</button>
+</section>
+
+<!-- Phase 2: Microscope Field of View -->
+<section id="phase2">
+  <h1>Microscope Simulation - Field of View</h1>
+  <div id="lens-buttons">
+    <button onclick="setLens('low')">LOW OBJECTIVE LENS</button>
+    <button onclick="setLens('medium')">MEDIUM OBJECTIVE LENS</button>
+    <button onclick="setLens('high')">HIGH OBJECTIVE LENS</button>
+  </div>
+  <div id="field-container">
+    <video id="specimenVideo" loop muted></video>
+    <div id="fov-mask"></div>
+    <div class="knob-panel" id="fine-knob">
+      <button onmousedown="startPlay(0.25)" onmouseup="stopPlay()">▲</button>
+      <button onmousedown="reversePlay(0.25)" onmouseup="stopPlay()">▼</button>
+      <div style="color: #2196F3; font-weight: bold; text-align: center;">FINE<br>ADJUSTMENT<br>KNOB</div>
+    </div>
+    <div class="knob-panel" id="coarse-knob">
+      <button onmousedown="startPlay(1.0)" onmouseup="stopPlay()">▲</button>
+      <button onmousedown="reversePlay(1.0)" onmouseup="stopPlay()">▼</button>
+      <div style="color: #2196F3; font-weight: bold; text-align: center;">COARSE<br>ADJUSTMENT<br>KNOB</div>
+    </div>
+  </div>
+  <div id="magnification">MAGNIFICATION: 10x</div>
+</section>
+
+<script>
+  function switchPhase() {
+    document.getElementById('phase1').classList.remove('active');
+    document.getElementById('phase2').classList.add('active');
+  }
+
+  const video = document.getElementById('specimenVideo');
+  let currentSpeed = 1.0;
+  let playDirection = 1;
+  let playInterval = null;
+
+  const lensMap = {
+    low: { src: 'videos/low_resolution.mp4', magnification: '10x' },
+    medium: { src: 'videos/medium_resolution.mp4', magnification: '40x' },
+    high: { src: 'videos/high_resolution.mp4', magnification: '100x' },
+  };
+
+  function setLens(level) {
+    video.src = lensMap[level].src;
+    video.load();
+    document.getElementById('magnification').innerText = 'MAGNIFICATION: ' + lensMap[level].magnification;
+  }
+
+  function startPlay(speed) {
+    stopPlay();
+    currentSpeed = speed;
+    playDirection = 1;
+    playInterval = setInterval(() => {
+      video.currentTime += currentSpeed / 10;
+    }, 100);
+  }
+
+  function reversePlay(speed) {
+    stopPlay();
+    currentSpeed = speed;
+    playDirection = -1;
+    playInterval = setInterval(() => {
+      video.currentTime -= currentSpeed / 10;
+    }, 100);
+  }
+
+  function stopPlay() {
+    if (playInterval) clearInterval(playInterval);
+  }
+
+  // Load default lens on start
+  window.onload = () => setLens('low');
+</script>
+</body>
+</html>
