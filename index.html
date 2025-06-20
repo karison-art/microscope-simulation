@@ -7,11 +7,33 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
   <style>
-    /* [Your full CSS remains unchanged – already correct and complete] */
+    /* ... Your unchanged CSS ... */
+
+    /* Example for the relevant .objective-controls fix: */
+    .objective-controls {
+      position: absolute;
+      top: 80px; /* Lowered from original value */
+      left: 50%;
+      transform: translateX(-50%);
+      display: flex;
+      gap: 10px;
+      background: rgba(255,255,255,0.1);
+      padding: 15px;
+      border-radius: 25px;
+      backdrop-filter: blur(10px);
+      z-index: 5;   /* Ensures proper stacking above video, below header */
+    }
+
+    /* Responsive: keep top value consistent */
+    @media (max-width: 768px) {
+      .objective-controls {
+        top: 80px;
+      }
+    }
   </style>
 </head>
 <body>
-  <!-- [Your HTML structure remains unchanged – already well structured] -->
+  <!-- [Your HTML structure remains unchanged except for .objective-controls positioning] -->
 
   <script>
     // Microscope parts data [unchanged]
@@ -44,39 +66,46 @@
       directionalLight.castShadow = true;
       scene.add(directionalLight);
 
-      const loader = new THREE.GLTFLoader();
-      loader.load('models/microscope.glb',
-        function(gltf) {
-          microscope = gltf.scene;
-          microscope.scale.set(2, 2, 2);
-          microscope.position.set(0, -1, 0);
+      // Ensure GLTFLoader is available and load the model
+      if (typeof THREE.GLTFLoader !== "undefined") {
+        const loader = new THREE.GLTFLoader();
+        loader.load(
+          'models/microscope.glb',
+          function(gltf) {
+            microscope = gltf.scene;
+            microscope.scale.set(2, 2, 2);
+            microscope.position.set(0, -1, 0);
 
-          microscope.traverse(function(child) {
-            if (child.isMesh) {
-              child.castShadow = true;
-              child.receiveShadow = true;
+            microscope.traverse(function(child) {
+              if (child.isMesh) {
+                child.castShadow = true;
+                child.receiveShadow = true;
+                const name = child.name.toLowerCase();
+                if (name.includes('eyepiece')) child.userData.part = 'eyepiece';
+                else if (name.includes('objective')) child.userData.part = 'objectives';
+                else if (name.includes('stage')) child.userData.part = 'stage';
+                else if (name.includes('base')) child.userData.part = 'base';
+                else if (name.includes('arm')) child.userData.part = 'arm';
+              }
+            });
 
-              const name = child.name.toLowerCase();
-              if (name.includes('eyepiece')) child.userData.part = 'eyepiece';
-              else if (name.includes('objective')) child.userData.part = 'objectives';
-              else if (name.includes('stage')) child.userData.part = 'stage';
-              else if (name.includes('base')) child.userData.part = 'base';
-              else if (name.includes('arm')) child.userData.part = 'arm';
-            }
-          });
+            scene.add(microscope);
+            document.getElementById('loading-message').style.display = 'none';
 
-          scene.add(microscope);
-          document.getElementById('loading-message').style.display = 'none';
-
-          animate();
-        },
-        undefined,
-        function(error) {
-          console.error('Error loading 3D model:', error);
-          document.getElementById('loading-message').innerHTML =
-            '<h3>3D Model Not Found</h3><p>Please add microscope.glb to the models/ folder</p>';
-        }
-      );
+            animate();
+          },
+          undefined,
+          function(error) {
+            console.error('Error loading 3D model:', error);
+            document.getElementById('loading-message').innerHTML =
+              '<h3>3D Model Not Found</h3><p>Please add microscope.glb to the models/ folder</p>';
+          }
+        );
+      } else {
+        // GLTFLoader not found
+        document.getElementById('loading-message').innerHTML =
+          '<h3>GLTFLoader Not Found</h3><p>Check the GLTFLoader script include in your HTML & network connection.</p>';
+      }
 
       canvas.addEventListener('mousemove', onMouseMove);
       canvas.addEventListener('click', onMouseClick);
