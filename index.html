@@ -3,16 +3,120 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Virtual Microscope Simulation</title>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
+  <title>Microscope Simulation - Onion Cell View</title>
   <style>
-    /* ... Your unchanged CSS ... */
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
+    }
 
-    /* Example for the relevant .objective-controls fix: */
+    .simulation-header {
+      text-align: center;
+      padding: 20px;
+      color: white;
+      background: rgba(0,0,0,0.2);
+      z-index: 10;
+    }
+
+    .simulation-header h1 {
+      font-size: 28px;
+      margin-bottom: 10px;
+    }
+
+    .main-interface {
+      display: flex;
+      height: calc(100vh - 100px);
+      align-items: center;
+      justify-content: center;
+      position: relative;
+      padding: 20px;
+    }
+
+    .field-of-view {
+      width: min(60vh, 60vw);
+      height: min(60vh, 60vw);
+      border-radius: 50%;
+      background: #000;
+      overflow: hidden;
+      border: 8px solid #34495e;
+      box-shadow: 0 0 30px rgba(0,0,0,0.8), inset 0 0 50px rgba(255,255,255,0.1);
+    }
+
+    .field-video {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      border-radius: 50%;
+    }
+
+    .control-panel {
+      position: absolute;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 15px;
+    }
+
+    .control-panel.left { left: 50px; }
+    .control-panel.right { right: 50px; }
+
+    .knob-container {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 10px;
+      background: rgba(255,255,255,0.1);
+      padding: 20px;
+      border-radius: 15px;
+      backdrop-filter: blur(10px);
+    }
+
+    .knob-label {
+      color: white;
+      font-weight: bold;
+      text-align: center;
+      font-size: 14px;
+    }
+
+    .knob-button {
+      width: 50px;
+      height: 50px;
+      border: none;
+      border-radius: 50%;
+      background: linear-gradient(145deg, #3498db, #2980b9);
+      color: white;
+      font-size: 24px;
+      cursor: pointer;
+      box-shadow: 0 4px 15px rgba(52, 152, 219, 0.3);
+    }
+
+    .knob-button:hover {
+      transform: scale(1.1);
+    }
+
+    .knob-indicator {
+      width: 60px;
+      height: 15px;
+      background: rgba(255,255,255,0.3);
+      border-radius: 10px;
+      position: relative;
+    }
+
+    .knob-handle {
+      width: 25px;
+      height: 25px;
+      background: #e74c3c;
+      border-radius: 50%;
+      position: absolute;
+      top: -5px;
+      left: 50%;
+      transform: translateX(-50%);
+    }
+
     .objective-controls {
       position: absolute;
-      top: 80px; /* Lowered from original value */
+      top: 120px; /* Adjusted lower from 80px */
       left: 50%;
       transform: translateX(-50%);
       display: flex;
@@ -21,160 +125,148 @@
       padding: 15px;
       border-radius: 25px;
       backdrop-filter: blur(10px);
-      z-index: 5;   /* Ensures proper stacking above video, below header */
+      z-index: 5;
     }
 
-    /* Responsive: keep top value consistent */
-    @media (max-width: 768px) {
-      .objective-controls {
-        top: 80px;
-      }
+    .objective-btn {
+      padding: 12px 20px;
+      border: none;
+      border-radius: 20px;
+      background: rgba(255,255,255,0.2);
+      color: white;
+      font-weight: bold;
+      cursor: pointer;
+    }
+
+    .objective-btn.active {
+      background: linear-gradient(45deg, #e74c3c, #c0392b);
+      box-shadow: 0 4px 15px rgba(231, 76, 60, 0.4);
+    }
+
+    .magnification-display {
+      position: absolute;
+      bottom: 15px; /* Adjusted lower from 30px */
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(0,0,0,0.8);
+      color: white;
+      padding: 15px 30px;
+      border-radius: 25px;
+      font-size: 18px;
+      font-weight: bold;
     }
   </style>
 </head>
 <body>
-  <!-- [Your HTML structure remains unchanged except for .objective-controls positioning] -->
+  <div class="simulation-header">
+    <h1>Microscope Simulation - Onion Cell Observation</h1>
+    <p>Use the adjustment knobs to focus and select lenses to change magnification</p>
+  </div>
+
+  <div class="objective-controls">
+    <button class="objective-btn active" onclick="setObjective('low', 10)">Low Power</button>
+    <button class="objective-btn" onclick="setObjective('medium', 40)">Medium Power</button>
+    <button class="objective-btn" onclick="setObjective('high', 100)">High Power</button>
+  </div>
+
+  <div class="main-interface">
+    <div class="control-panel left">
+      <div class="knob-container">
+        <div class="knob-label">Coarse<br>Adjustment</div>
+        <button class="knob-button" onmousedown="startAdjustment('coarse', 'up')" onmouseup="stopAdjustment()">↑</button>
+        <div class="knob-indicator">
+          <div class="knob-handle" id="coarse-handle"></div>
+        </div>
+        <button class="knob-button" onmousedown="startAdjustment('coarse', 'down')" onmouseup="stopAdjustment()">↓</button>
+      </div>
+    </div>
+
+    <div class="field-of-view">
+      <video class="field-video" id="microscope-video" muted preload="auto">
+        <source src="videos/low_resolution.mp4" type="video/mp4">
+      </video>
+    </div>
+
+    <div class="control-panel right">
+      <div class="knob-container">
+        <div class="knob-label">Fine<br>Adjustment</div>
+        <button class="knob-button" onmousedown="startAdjustment('fine', 'up')" onmouseup="stopAdjustment()">↑</button>
+        <div class="knob-indicator">
+          <div class="knob-handle" id="fine-handle"></div>
+        </div>
+        <button class="knob-button" onmousedown="startAdjustment('fine', 'down')" onmouseup="stopAdjustment()">↓</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="magnification-display" id="magnification">Magnification: 10×</div>
 
   <script>
-    // Microscope parts data [unchanged]
+    let currentMagnification = 10;
+    let adjustmentInterval = null;
+    let reverseInterval = null;
+    let coarsePosition = 50;
+    let finePosition = 50;
 
-    // Three.js setup
-    let scene, camera, renderer, microscope;
-    let mouse = new THREE.Vector2();
-    let raycaster = new THREE.Raycaster();
+    function setObjective(level, magnification) {
+      document.querySelectorAll('.objective-btn').forEach(btn => btn.classList.remove('active'));
+      event.target.classList.add('active');
 
-    function init3D() {
-      const canvas = document.getElementById('microscope-3d');
-      const container = canvas.parentElement;
+      const video = document.getElementById('microscope-video');
+      const currentTime = video.currentTime;
+      video.src = `videos/${level}_resolution.mp4`;
+      video.load();
+      video.addEventListener('loadeddata', () => {
+        video.currentTime = Math.min(currentTime, video.duration);
+      }, { once: true });
 
-      scene = new THREE.Scene();
-      scene.background = new THREE.Color(0x667eea);
+      document.getElementById('magnification').textContent = `Magnification: ${magnification}×`;
+      currentMagnification = magnification;
+    }
 
-      camera = new THREE.PerspectiveCamera(75, container.offsetWidth / container.offsetHeight, 0.1, 1000);
-      camera.position.set(0, 0, 5);
+    function startAdjustment(type, direction) {
+      const video = document.getElementById('microscope-video');
+      const handle = document.getElementById(`${type}-handle`);
 
-      renderer = new THREE.WebGLRenderer({ canvas: canvas, antialias: true });
-      renderer.setSize(container.offsetWidth, container.offsetHeight);
-      renderer.shadowMap.enabled = true;
-      renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+      stopAdjustment();
 
-      const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
-      scene.add(ambientLight);
-
-      const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
-      directionalLight.position.set(5, 5, 5);
-      directionalLight.castShadow = true;
-      scene.add(directionalLight);
-
-      // Ensure GLTFLoader is available and load the model
-      if (typeof THREE.GLTFLoader !== "undefined") {
-        const loader = new THREE.GLTFLoader();
-        loader.load(
-          'models/microscope.glb',
-          function(gltf) {
-            microscope = gltf.scene;
-            microscope.scale.set(2, 2, 2);
-            microscope.position.set(0, -1, 0);
-
-            microscope.traverse(function(child) {
-              if (child.isMesh) {
-                child.castShadow = true;
-                child.receiveShadow = true;
-                const name = child.name.toLowerCase();
-                if (name.includes('eyepiece')) child.userData.part = 'eyepiece';
-                else if (name.includes('objective')) child.userData.part = 'objectives';
-                else if (name.includes('stage')) child.userData.part = 'stage';
-                else if (name.includes('base')) child.userData.part = 'base';
-                else if (name.includes('arm')) child.userData.part = 'arm';
-              }
-            });
-
-            scene.add(microscope);
-            document.getElementById('loading-message').style.display = 'none';
-
-            animate();
-          },
-          undefined,
-          function(error) {
-            console.error('Error loading 3D model:', error);
-            document.getElementById('loading-message').innerHTML =
-              '<h3>3D Model Not Found</h3><p>Please add microscope.glb to the models/ folder</p>';
+      if (direction === 'up') {
+        video.playbackRate = type === 'coarse' ? 1.0 : 0.25;
+        video.play();
+        adjustmentInterval = setInterval(() => {
+          if (type === 'coarse') {
+            coarsePosition = Math.max(0, coarsePosition - 2);
+            handle.style.left = `${coarsePosition}%`;
+          } else {
+            finePosition = Math.max(0, finePosition - 2);
+            handle.style.left = `${finePosition}%`;
           }
-        );
+        }, 100);
       } else {
-        // GLTFLoader not found
-        document.getElementById('loading-message').innerHTML =
-          '<h3>GLTFLoader Not Found</h3><p>Check the GLTFLoader script include in your HTML & network connection.</p>';
-      }
-
-      canvas.addEventListener('mousemove', onMouseMove);
-      canvas.addEventListener('click', onMouseClick);
-    }
-
-    function onMouseMove(event) {
-      if (!microscope) return;
-      const rect = event.target.getBoundingClientRect();
-      mouse.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
-      mouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
-      raycaster.setFromCamera(mouse, camera);
-
-      const intersects = raycaster.intersectObjects(microscope.children, true);
-      if (intersects.length > 0) {
-        const obj = intersects[0].object;
-        showTooltip(obj.userData.part || 'base');
-        document.body.style.cursor = 'pointer';
-      } else {
-        hideTooltip();
-        document.body.style.cursor = 'default';
+        video.pause();
+        const speed = type === 'coarse' ? 0.1 : 0.025;
+        reverseInterval = setInterval(() => {
+          if (video.currentTime > 0) {
+            video.currentTime = Math.max(0, video.currentTime - speed);
+          }
+          if (type === 'coarse') {
+            coarsePosition = Math.min(100, coarsePosition + 2);
+            handle.style.left = `${coarsePosition}%`;
+          } else {
+            finePosition = Math.min(100, finePosition + 2);
+            handle.style.left = `${finePosition}%`;
+          }
+        }, 50);
       }
     }
 
-    function onMouseClick(event) {
-      if (!microscope) return;
-      const rect = event.target.getBoundingClientRect();
-      mouse.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
-      mouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
-      raycaster.setFromCamera(mouse, camera);
-
-      const intersects = raycaster.intersectObjects(microscope.children, true);
-      if (intersects.length > 0) {
-        const obj = intersects[0].object;
-        showTooltip(obj.userData.part || 'base');
-      }
+    function stopAdjustment() {
+      clearInterval(adjustmentInterval);
+      clearInterval(reverseInterval);
+      adjustmentInterval = null;
+      reverseInterval = null;
+      document.getElementById('microscope-video').pause();
     }
-
-    function showTooltip(partName) {
-      const tooltip = document.getElementById('tooltip');
-      const title = document.getElementById('tooltip-title');
-      const desc = document.getElementById('tooltip-description');
-
-      if (microscopeData[partName]) {
-        title.textContent = microscopeData[partName].title;
-        desc.textContent = microscopeData[partName].description;
-        tooltip.classList.add('show');
-      }
-    }
-
-    function hideTooltip() {
-      document.getElementById('tooltip').classList.remove('show');
-    }
-
-    function animate() {
-      requestAnimationFrame(animate);
-      if (microscope) microscope.rotation.y += 0.005;
-      renderer.render(scene, camera);
-    }
-
-    window.addEventListener('resize', function() {
-      if (camera && renderer) {
-        const container = document.getElementById('microscope-3d').parentElement;
-        camera.aspect = container.offsetWidth / container.offsetHeight;
-        camera.updateProjectionMatrix();
-        renderer.setSize(container.offsetWidth, container.offsetHeight);
-      }
-    });
-
-    document.addEventListener('DOMContentLoaded', init3D);
   </script>
 </body>
 </html>
