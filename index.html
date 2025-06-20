@@ -1,0 +1,645 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Virtual Microscope Simulation</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Arial', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            overflow-x: hidden;
+            user-select: none;
+        }
+
+        .container {
+            width: 100vw;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+
+        /* Phase 1 Styles */
+        .phase1 {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            width: 100%;
+        }
+
+        .microscope-container {
+            position: relative;
+            width: 400px;
+            height: 500px;
+            margin-bottom: 30px;
+        }
+
+        .microscope-svg {
+            width: 100%;
+            height: 100%;
+            filter: drop-shadow(0 10px 20px rgba(0,0,0,0.3));
+        }
+
+        .tooltip {
+            position: absolute;
+            right: -250px;
+            top: 0;
+            width: 240px;
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 12px;
+            padding: 15px;
+            box-shadow: 0 8px 25px rgba(0,0,0,0.2);
+            opacity: 0;
+            transform: translateX(20px);
+            transition: all 0.3s ease;
+            pointer-events: none;
+            border-left: 4px solid #667eea;
+        }
+
+        .tooltip.show {
+            opacity: 1;
+            transform: translateX(0);
+        }
+
+        .tooltip h3 {
+            color: #333;
+            margin-bottom: 8px;
+            font-size: 16px;
+        }
+
+        .tooltip p {
+            color: #666;
+            font-size: 14px;
+            line-height: 1.4;
+        }
+
+        .start-button {
+            background: linear-gradient(45deg, #8e44ad, #9b59b6);
+            color: white;
+            padding: 20px 40px;
+            border: none;
+            border-radius: 50px;
+            font-size: 18px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 8px 25px rgba(142, 68, 173, 0.3);
+        }
+
+        .start-button:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 12px 35px rgba(142, 68, 173, 0.4);
+        }
+
+        /* Phase 2 Styles */
+        .phase2 {
+            display: none;
+            width: 100%;
+            height: 100vh;
+            flex-direction: column;
+            background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
+        }
+
+        .simulation-header {
+            text-align: center;
+            padding: 20px;
+            color: white;
+            background: rgba(0,0,0,0.2);
+        }
+
+        .simulation-header h1 {
+            font-size: 28px;
+            margin-bottom: 10px;
+        }
+
+        .main-interface {
+            display: flex;
+            flex: 1;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            padding: 20px;
+        }
+
+        .field-of-view {
+            width: min(60vh, 60vw);
+            height: min(60vh, 60vw);
+            border-radius: 50%;
+            background: #000;
+            position: relative;
+            overflow: hidden;
+            border: 8px solid #34495e;
+            box-shadow: 0 0 30px rgba(0,0,0,0.8), inset 0 0 50px rgba(255,255,255,0.1);
+        }
+
+        .field-video {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            border-radius: 50%;
+        }
+
+        .control-panel {
+            position: absolute;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .control-panel.left {
+            left: 50px;
+        }
+
+        .control-panel.right {
+            right: 50px;
+        }
+
+        .knob-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 10px;
+            background: rgba(255,255,255,0.1);
+            padding: 20px;
+            border-radius: 15px;
+            backdrop-filter: blur(10px);
+        }
+
+        .knob-label {
+            color: white;
+            font-weight: bold;
+            text-align: center;
+            font-size: 14px;
+        }
+
+        .knob-controls {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .knob-button {
+            width: 50px;
+            height: 50px;
+            border: none;
+            border-radius: 50%;
+            background: linear-gradient(145deg, #3498db, #2980b9);
+            color: white;
+            font-size: 24px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            box-shadow: 0 4px 15px rgba(52, 152, 219, 0.3);
+        }
+
+        .knob-button:hover {
+            transform: scale(1.1);
+            box-shadow: 0 6px 20px rgba(52, 152, 219, 0.4);
+        }
+
+        .knob-button:active {
+            transform: scale(0.95);
+        }
+
+        .knob-indicator {
+            width: 60px;
+            height: 15px;
+            background: rgba(255,255,255,0.3);
+            border-radius: 10px;
+            position: relative;
+            margin: 10px 0;
+        }
+
+        .knob-handle {
+            width: 25px;
+            height: 25px;
+            background: #e74c3c;
+            border-radius: 50%;
+            position: absolute;
+            top: -5px;
+            left: 50%;
+            transform: translateX(-50%);
+            transition: all 0.3s ease;
+            box-shadow: 0 2px 10px rgba(231, 76, 60, 0.4);
+        }
+
+        .objective-controls {
+            position: absolute;
+            top: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 10px;
+            background: rgba(255,255,255,0.1);
+            padding: 15px;
+            border-radius: 25px;
+            backdrop-filter: blur(10px);
+        }
+
+        .objective-btn {
+            padding: 12px 20px;
+            border: none;
+            border-radius: 20px;
+            background: rgba(255,255,255,0.2);
+            color: white;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-weight: bold;
+        }
+
+        .objective-btn.active {
+            background: linear-gradient(45deg, #e74c3c, #c0392b);
+            box-shadow: 0 4px 15px rgba(231, 76, 60, 0.4);
+        }
+
+        .objective-btn:hover {
+            background: rgba(255,255,255,0.3);
+            transform: translateY(-2px);
+        }
+
+        .magnification-display {
+            position: absolute;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0,0,0,0.8);
+            color: white;
+            padding: 15px 30px;
+            border-radius: 25px;
+            font-size: 18px;
+            font-weight: bold;
+            backdrop-filter: blur(10px);
+        }
+
+        .back-button {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            background: rgba(231, 76, 60, 0.9);
+            color: white;
+            border: none;
+            padding: 12px 20px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.3s ease;
+        }
+
+        .back-button:hover {
+            background: rgba(231, 76, 60, 1);
+            transform: translateY(-2px);
+        }
+
+        /* Mobile Responsive */
+        @media (max-width: 768px) {
+            .control-panel.left {
+                left: 10px;
+            }
+            .control-panel.right {
+                right: 10px;
+            }
+            .knob-container {
+                padding: 15px;
+            }
+            .knob-button {
+                width: 40px;
+                height: 40px;
+                font-size: 20px;
+            }
+            .microscope-container {
+                width: 300px;
+                height: 400px;
+            }
+            .tooltip {
+                right: -200px;
+                width: 180px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Phase 1: 3D Microscope Interface -->
+        <div class="phase1" id="phase1">
+            <div class="microscope-container">
+                <svg class="microscope-svg" viewBox="0 0 300 400" xmlns="http://www.w3.org/2000/svg">
+                    <!-- Base -->
+                    <rect x="50" y="350" width="200" height="40" rx="20" fill="#2c3e50" class="microscope-part" data-part="base"/>
+                    
+                    <!-- Arm -->
+                    <path d="M 150 350 Q 120 320 120 250 L 120 150" stroke="#34495e" stroke-width="15" fill="none" class="microscope-part" data-part="arm"/>
+                    
+                    <!-- Stage -->
+                    <rect x="80" y="240" width="120" height="8" rx="4" fill="#7f8c8d" class="microscope-part" data-part="stage"/>
+                    <rect x="70" y="235" width="10" height="18" rx="2" fill="#95a5a6" class="microscope-part" data-part="clips"/>
+                    <rect x="220" y="235" width="10" height="18" rx="2" fill="#95a5a6" class="microscope-part" data-part="clips"/>
+                    
+                    <!-- Body Tube -->
+                    <rect x="135" y="150" width="30" height="100" rx="15" fill="#34495e" class="microscope-part" data-part="body-tube"/>
+                    
+                    <!-- Revolving Nosepiece -->
+                    <circle cx="150" cy="250" r="25" fill="#2c3e50" class="microscope-part" data-part="nosepiece"/>
+                    
+                    <!-- Objective Lenses -->
+                    <rect x="125" y="270" width="15" height="25" rx="7" fill="#e67e22" class="microscope-part" data-part="objectives"/>
+                    <rect x="145" y="275" width="15" height="20" rx="7" fill="#e67e22" class="microscope-part" data-part="objectives"/>
+                    <rect x="165" y="270" width="15" height="25" rx="7" fill="#e67e22" class="microscope-part" data-part="objectives"/>
+                    
+                    <!-- Eyepiece -->
+                    <rect x="140" y="130" width="20" height="30" rx="10" fill="#8e44ad" class="microscope-part" data-part="eyepiece"/>
+                    
+                    <!-- Light Source -->
+                    <circle cx="150" cy="330" r="15" fill="#f39c12" class="microscope-part" data-part="light"/>
+                    
+                    <!-- Condenser -->
+                    <rect x="140" y="310" width="20" height="15" rx="7" fill="#16a085" class="microscope-part" data-part="condenser"/>
+                    
+                    <!-- Diaphragm -->
+                    <circle cx="150" cy="300" r="8" fill="#27ae60" class="microscope-part" data-part="diaphragm"/>
+                    
+                    <!-- Adjustment Knobs -->
+                    <circle cx="250" cy="200" r="20" fill="#e74c3c" class="microscope-part" data-part="coarse"/>
+                    <circle cx="250" cy="240" r="15" fill="#c0392b" class="microscope-part" data-part="fine"/>
+                </svg>
+                
+                <div class="tooltip" id="tooltip">
+                    <h3 id="tooltip-title">Microscope Part</h3>
+                    <p id="tooltip-description">Hover over parts to learn about them!</p>
+                </div>
+            </div>
+            
+            <button class="start-button" onclick="startSimulation()">
+                Tap to View Onion Cell Under Microscope
+            </button>
+        </div>
+
+        <!-- Phase 2: Field of View Interaction -->
+        <div class="phase2" id="phase2">
+            <button class="back-button" onclick="goBack()">← Back to Microscope</button>
+            
+            <div class="simulation-header">
+                <h1>Virtual Microscope - Onion Cell Observation</h1>
+                <p>Use the adjustment knobs to focus and select objective lenses to change magnification</p>
+            </div>
+
+            <div class="objective-controls">
+                <button class="objective-btn active" onclick="setObjective('low', 10)">Low Power</button>
+                <button class="objective-btn" onclick="setObjective('medium', 40)">Medium Power</button>
+                <button class="objective-btn" onclick="setObjective('high', 100)">High Power</button>
+            </div>
+
+            <div class="main-interface">
+                <div class="control-panel left">
+                    <div class="knob-container">
+                        <div class="knob-label">Coarse<br>Adjustment</div>
+                        <div class="knob-controls">
+                            <button class="knob-button" onmousedown="startAdjustment('coarse', 'up')" onmouseup="stopAdjustment()" ontouchstart="startAdjustment('coarse', 'up')" ontouchend="stopAdjustment()">↑</button>
+                            <div class="knob-indicator">
+                                <div class="knob-handle" id="coarse-handle"></div>
+                            </div>
+                            <button class="knob-button" onmousedown="startAdjustment('coarse', 'down')" onmouseup="stopAdjustment()" ontouchstart="startAdjustment('coarse', 'down')" ontouchend="stopAdjustment()">↓</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="field-of-view">
+                    <video class="field-video" id="microscope-video" muted loop>
+                        <source src="videos/low_resolution.mp4" type="video/mp4">
+                        <!-- Fallback content for when videos aren't available -->
+                        <div style="display: flex; align-items: center; justify-content: center; height: 100%; color: white; text-align: center; padding: 20px;">
+                            <div>
+                                <h3>Video Loading...</h3>
+                                <p>Please ensure your video files are in the /videos/ folder:</p>
+                                <ul style="text-align: left; margin-top: 10px;">
+                                    <li>low_resolution.mp4</li>
+                                    <li>medium_resolution.mp4</li>
+                                    <li>high_resolution.mp4</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </video>
+                </div>
+
+                <div class="control-panel right">
+                    <div class="knob-container">
+                        <div class="knob-label">Fine<br>Adjustment</div>
+                        <div class="knob-controls">
+                            <button class="knob-button" onmousedown="startAdjustment('fine', 'up')" onmouseup="stopAdjustment()" ontouchstart="startAdjustment('fine', 'up')" ontouchend="stopAdjustment()">↑</button>
+                            <div class="knob-indicator">
+                                <div class="knob-handle" id="fine-handle"></div>
+                            </div>
+                            <button class="knob-button" onmousedown="startAdjustment('fine', 'down')" onmouseup="stopAdjustment()" ontouchstart="startAdjustment('fine', 'down')" ontouchend="stopAdjustment()">↓</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="magnification-display" id="magnification">
+                Magnification: 10×
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Microscope parts data
+        const microscopeData = {
+            'eyepiece': {
+                title: 'Eyepiece (Ocular lens)',
+                description: 'The lens you look through; usually magnifies the image by 10×.'
+            },
+            'objectives': {
+                title: 'Objective Lenses',
+                description: 'Found on the rotating nosepiece; magnify the specimen (e.g., 4×, 10×, 40×).'
+            },
+            'nosepiece': {
+                title: 'Revolving Nosepiece',
+                description: 'Holds the objective lenses and allows you to rotate and switch between them.'
+            },
+            'stage': {
+                title: 'Stage',
+                description: 'The flat platform where the slide is placed.'
+            },
+            'clips': {
+                title: 'Stage Clips',
+                description: 'Hold the slide securely in place on the stage.'
+            },
+            'light': {
+                title: 'Mirror or Light Source',
+                description: 'Provides light to illuminate the specimen.'
+            },
+            'condenser': {
+                title: 'Condenser',
+                description: 'Focuses the light onto the specimen.'
+            },
+            'diaphragm': {
+                title: 'Diaphragm (Iris)',
+                description: 'Controls the amount of light that reaches the specimen.'
+            },
+            'body-tube': {
+                title: 'Body Tube',
+                description: 'Connects the eyepiece to the objective lenses.'
+            },
+            'arm': {
+                title: 'Arm',
+                description: 'Supports the body tube and is used for carrying the microscope.'
+            },
+            'coarse': {
+                title: 'Coarse Adjustment Knob',
+                description: 'Moves the stage up and down for general focusing.'
+            },
+            'fine': {
+                title: 'Fine Adjustment Knob',
+                description: 'Moves the stage slightly to fine-tune the focus.'
+            },
+            'base': {
+                title: 'Base',
+                description: 'The bottom part that supports the entire microscope.'
+            }
+        };
+
+        // Phase 1 functionality
+        document.addEventListener('DOMContentLoaded', function() {
+            const parts = document.querySelectorAll('.microscope-part');
+            const tooltip = document.getElementById('tooltip');
+            const tooltipTitle = document.getElementById('tooltip-title');
+            const tooltipDescription = document.getElementById('tooltip-description');
+
+            parts.forEach(part => {
+                part.addEventListener('mouseenter', function() {
+                    const partName = this.getAttribute('data-part');
+                    if (microscopeData[partName]) {
+                        tooltipTitle.textContent = microscopeData[partName].title;
+                        tooltipDescription.textContent = microscopeData[partName].description;
+                        tooltip.classList.add('show');
+                    }
+                });
+
+                part.addEventListener('mouseleave', function() {
+                    tooltip.classList.remove('show');
+                });
+            });
+        });
+
+        // Phase 2 functionality
+        let currentObjective = 'low';
+        let currentMagnification = 10;
+        let adjustmentInterval = null;
+        let coarsePosition = 50;
+        let finePosition = 50;
+
+        function startSimulation() {
+            document.getElementById('phase1').style.display = 'none';
+            document.getElementById('phase2').style.display = 'flex';
+        }
+
+        function goBack() {
+            document.getElementById('phase2').style.display = 'none';
+            document.getElementById('phase1').style.display = 'flex';
+            
+            // Reset video
+            const video = document.getElementById('microscope-video');
+            video.pause();
+            video.currentTime = 0;
+        }
+
+        function setObjective(level, magnification) {
+            currentObjective = level;
+            currentMagnification = magnification;
+            
+            // Update active button
+            document.querySelectorAll('.objective-btn').forEach(btn => btn.classList.remove('active'));
+            event.target.classList.add('active');
+            
+            // Update video source
+            const video = document.getElementById('microscope-video');
+            video.src = `videos/${level}_resolution.mp4`;
+            video.load();
+            
+            // Update magnification display
+            document.getElementById('magnification').textContent = `Magnification: ${magnification}×`;
+        }
+
+        function startAdjustment(type, direction) {
+            const video = document.getElementById('microscope-video');
+            const handle = document.getElementById(`${type}-handle`);
+            
+            // Prevent default touch behavior
+            event.preventDefault();
+            
+            adjustmentInterval = setInterval(() => {
+                if (direction === 'up') {
+                    // Play video forward
+                    video.playbackRate = type === 'coarse' ? 1.0 : 0.25;
+                    video.play();
+                    
+                    // Move handle up
+                    if (type === 'coarse') {
+                        coarsePosition = Math.max(0, coarsePosition - 2);
+                        handle.style.left = `${coarsePosition}%`;
+                    } else {
+                        finePosition = Math.max(0, finePosition - 2);
+                        handle.style.left = `${finePosition}%`;
+                    }
+                } else {
+                    // Play video backward (simulate by reversing current time)
+                    video.playbackRate = type === 'coarse' ? -1.0 : -0.25;
+                    if (video.currentTime > 0) {
+                        video.currentTime = Math.max(0, video.currentTime - 0.1);
+                    }
+                    
+                    // Move handle down
+                    if (type === 'coarse') {
+                        coarsePosition = Math.min(100, coarsePosition + 2);
+                        handle.style.left = `${coarsePosition}%`;
+                    } else {
+                        finePosition = Math.min(100, finePosition + 2);
+                        handle.style.left = `${finePosition}%`;
+                    }
+                }
+            }, 100);
+        }
+
+        function stopAdjustment() {
+            if (adjustmentInterval) {
+                clearInterval(adjustmentInterval);
+                adjustmentInterval = null;
+            }
+            
+            const video = document.getElementById('microscope-video');
+            video.pause();
+        }
+
+        // Touch event handling for mobile
+        document.addEventListener('touchstart', function(e) {
+            if (e.target.classList.contains('knob-button')) {
+                e.preventDefault();
+            }
+        });
+
+        document.addEventListener('touchend', function(e) {
+            if (e.target.classList.contains('knob-button')) {
+                e.preventDefault();
+                stopAdjustment();
+            }
+        });
+
+        // Prevent context menu on long press
+        document.addEventListener('contextmenu', function(e) {
+            if (e.target.classList.contains('knob-button')) {
+                e.preventDefault();
+            }
+        });
+    </script>
+</body>
+</html>
