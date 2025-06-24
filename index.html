@@ -602,281 +602,245 @@
         </div>
     </div>
 
-    <script>
-        // Simulation state
-        let currentObjective = 'low';
-        let coarseFocus = 50;
-        let fineFocus = 50;
-        let adjustmentInterval = null;
-        let currentAdjustmentType = null;
-        let currentVideo = null;
+<script>
+    // Simulation state
+    let currentObjective = 'low';
+    let coarseFocus = 50;
+    let fineFocus = 50;
+    let adjustmentInterval = null;
+    let currentAdjustmentType = null;
+    let currentVideo = null;
 
-        // Video URLs from GitHub repository
-        const videoUrls = {
-            low: 'https://raw.githubusercontent.com/yourusername/yourrepo/main/low_resolution.mp4',
-            medium: 'https://raw.githubusercontent.com/yourusername/yourrepo/main/medium_resolution.mp4',
-            high: 'https://raw.githubusercontent.com/yourusername/yourrepo/main/high_resolution.mp4'
-        };
+    // Video URLs from GitHub Pages
+    const videoUrls = {
+        low: 'https://karison-art.github.io/microscope-simulation/videos/low_resolution.mp4',
+        medium: 'https://karison-art.github.io/microscope-simulation/videos/medium_resolution.mp4',
+        high: 'https://karison-art.github.io/microscope-simulation/videos/high_resolution.mp4'
+    };
 
-        // Magnification levels
-        const magnifications = {
-            low: { mag: '40x', cells: 3, size: 80 },
-            medium: { mag: '100x', cells: 6, size: 60 },
-            high: { mag: '400x', cells: 12, size: 40 }
-        };
+    // Magnification levels
+    const magnifications = {
+        low: { mag: '40x', cells: 3, size: 80 },
+        medium: { mag: '100x', cells: 6, size: 60 },
+        high: { mag: '400x', cells: 12, size: 40 }
+    };
 
-        // Sound effects (optional - can be enabled with actual audio files)
-        function playSound(type) {
-            // Placeholder for sound effects
-            // You can add actual audio files here
-            console.log(`Playing sound: ${type}`);
+    // Sound effects (optional - can be enabled with actual audio files)
+    function playSound(type) {
+        // Placeholder for sound effects
+        // You can add actual audio files here
+        console.log(`Playing sound: ${type}`);
+    }
+
+    function startSimulation() {
+        document.getElementById('phase1').style.display = 'none';
+        document.getElementById('phase2').style.display = 'flex';
+        initializeVideo();
+        updateFocus();
+        playSound('start');
+    }
+
+    function initializeVideo() {
+        const specimenContent = document.getElementById('specimenContent');
+        specimenContent.innerHTML = `
+            <div class="video-container">
+                <video id="microscopeVideo" class="microscope-video" muted loop>
+                    <source src="${videoUrls[currentObjective]}" type="video/mp4">
+                    Your browser does not support the video tag.
+                </video>
+            </div>
+        `;
+
+        currentVideo = document.getElementById('microscopeVideo');
+        currentVideo.addEventListener('loadeddata', () => {
+            currentVideo.currentTime = 0;
+        });
+    }
+
+    function playForward(rate) {
+        if (currentVideo) {
+            if (currentVideo.reverseInterval) clearInterval(currentVideo.reverseInterval);
+            currentVideo.playbackRate = rate;
+            currentVideo.play();
         }
+    }
 
-        function startSimulation() {
-            document.getElementById('phase1').style.display = 'none';
-            document.getElementById('phase2').style.display = 'flex';
-            initializeVideo();
-            updateFocus();
-            playSound('start');
-        }
+    function playReverse(rate) {
+        if (currentVideo) {
+            currentVideo.pause();
+            if (currentVideo.reverseInterval) clearInterval(currentVideo.reverseInterval);
 
-        function initializeVideo() {
-            const specimenContent = document.getElementById('specimenContent');
-            specimenContent.innerHTML = `
-                <div class="video-container">
-                    <video id="microscopeVideo" class="microscope-video" muted loop>
-                        <source src="${videoUrls[currentObjective]}" type="video/mp4">
-                        Your browser does not support the video tag.
-                    </video>
-                </div>
-            `;
-            
-            currentVideo = document.getElementById('microscopeVideo');
-            currentVideo.addEventListener('loadeddata', () => {
-                currentVideo.currentTime = 0;
-            });
-        }
-
-        function generateOnionCells() {
-            // This function is now replaced by video playback
-            // Keep for fallback if videos don't load
-            if (!currentVideo || currentVideo.error) {
-                const cellsContainer = document.getElementById('onionCells');
-                if (cellsContainer) {
-                    cellsContainer.innerHTML = '';
-                    
-                    const config = magnifications[currentObjective];
-                    
-                    for (let i = 0; i < config.cells; i++) {
-                        const cell = document.createElement('div');
-                        cell.className = 'cell cell-animate';
-                        
-                        const angle = (360 / config.cells) * i + Math.random() * 60 - 30;
-                        const radius = 80 + Math.random() * 80;
-                        const x = 50 + (radius * Math.cos(angle * Math.PI / 180)) / 3.6;
-                        const y = 50 + (radius * Math.sin(angle * Math.PI / 180)) / 3.6;
-                        
-                        cell.style.left = Math.max(5, Math.min(85, x)) + '%';
-                        cell.style.top = Math.max(5, Math.min(85, y)) + '%';
-                        cell.style.width = config.size + Math.random() * 20 + 'px';
-                        cell.style.height = config.size + Math.random() * 15 + 'px';
-                        
-                        const nucleus = document.createElement('div');
-                        nucleus.className = 'cell-nucleus';
-                        nucleus.style.width = (config.size * 0.3) + 'px';
-                        nucleus.style.height = (config.size * 0.3) + 'px';
-                        
-                        cell.appendChild(nucleus);
-                        cellsContainer.appendChild(cell);
-                    }
-                }
-            }
-        }
-
-        function switchObjective(objective) {
-            currentObjective = objective;
-            
-            // Update active tab
-            document.querySelectorAll('.objective-tab').forEach(tab => {
-                tab.classList.remove('active');
-            });
-            event.target.classList.add('active');
-            
-            // Update magnification display
-            const config = magnifications[objective];
-            document.getElementById('magnificationDisplay').textContent = `Magnification: ${config.mag}`;
-            
-            // Switch video source
-            if (currentVideo) {
-                currentVideo.src = videoUrls[objective];
-                currentVideo.load();
-                currentVideo.currentTime = 0;
-            }
-            
-            updateFocus();
-            playSound('click');
-        }
-
-        function startCoarseAdjust(direction) {
-            if (adjustmentInterval) clearInterval(adjustmentInterval);
-            currentAdjustmentType = 'coarse';
-            
-            adjustmentInterval = setInterval(() => {
-                if (direction === 'up') {
-                    coarseFocus = Math.min(100, coarseFocus + 2);
-                    if (currentVideo && !currentVideo.paused) {
-                        // Play video forward at normal speed
-                        currentVideo.playbackRate = 1.0;
-                    } else if (currentVideo) {
-                        currentVideo.play();
-                        currentVideo.playbackRate = 1.0;
-                    }
+            currentVideo.reverseInterval = setInterval(() => {
+                if (currentVideo.currentTime > 0) {
+                    currentVideo.currentTime = Math.max(0, currentVideo.currentTime - rate * 0.05);
                 } else {
-                    coarseFocus = Math.max(0, coarseFocus - 2);
-                    if (currentVideo && !currentVideo.paused) {
-                        // Play video in reverse (simulate by going backwards in time)
-                        currentVideo.playbackRate = -1.0;
-                    } else if (currentVideo) {
-                        currentVideo.play();
-                        currentVideo.playbackRate = -1.0;
-                    }
+                    clearInterval(currentVideo.reverseInterval);
                 }
-                updateFocus();
-                updateKnobPosition('coarse');
-                updateVideoPlayback();
             }, 50);
-            
-            playSound('adjust');
         }
+    }
 
-        function startFineAdjust(direction) {
-            if (adjustmentInterval) clearInterval(adjustmentInterval);
-            currentAdjustmentType = 'fine';
-            
-            adjustmentInterval = setInterval(() => {
-                if (direction === 'up') {
-                    fineFocus = Math.min(100, fineFocus + 0.5);
-                    if (currentVideo && !currentVideo.paused) {
-                        // Play video forward at slow speed
-                        currentVideo.playbackRate = 0.25;
-                    } else if (currentVideo) {
-                        currentVideo.play();
-                        currentVideo.playbackRate = 0.25;
-                    }
-                } else {
-                    fineFocus = Math.max(0, fineFocus - 0.5);
-                    if (currentVideo && !currentVideo.paused) {
-                        // Play video in reverse at slow speed
-                        currentVideo.playbackRate = -0.25;
-                    } else if (currentVideo) {
-                        currentVideo.play();
-                        currentVideo.playbackRate = -0.25;
-                    }
-                }
-                updateFocus();
-                updateKnobPosition('fine');
-                updateVideoPlayback();
-            }, 50);
-            
-            playSound('adjust');
-        }
+    function startCoarseAdjust(direction) {
+        if (adjustmentInterval) clearInterval(adjustmentInterval);
+        currentAdjustmentType = 'coarse';
 
-        function stopAdjust() {
-            if (adjustmentInterval) {
-                clearInterval(adjustmentInterval);
-                adjustmentInterval = null;
-                currentAdjustmentType = null;
-                
-                // Pause video when not adjusting
-                if (currentVideo) {
-                    currentVideo.pause();
-                }
+        adjustmentInterval = setInterval(() => {
+            if (direction === 'up') {
+                coarseFocus = Math.min(100, coarseFocus + 2);
+                playForward(1.0); // normal speed
+            } else {
+                coarseFocus = Math.max(0, coarseFocus - 2);
+                playReverse(1.0); // normal speed reverse
             }
-        }
-
-        function updateVideoPlayback() {
-            if (!currentVideo) return;
-            
-            // Calculate video position based on focus
-            const totalFocus = (coarseFocus + fineFocus) / 2;
-            const videoPosition = totalFocus / 100;
-            
-            // Set video time based on focus position
-            if (currentVideo.duration) {
-                currentVideo.currentTime = videoPosition * currentVideo.duration;
-            }
-        }
-
-        function updateKnobPosition(type) {
-            const handle = document.getElementById(type + 'Handle');
-            const value = type === 'coarse' ? coarseFocus : fineFocus;
-            const position = 80 - (value * 0.8); // Inverted slider
-            handle.style.top = position + 'px';
-        }
-
-        function updateFocus() {
-            const specimenContent = document.getElementById('specimenContent');
-            const focusIndicator = document.getElementById('focusIndicator');
-            
-            // Calculate overall focus (combination of coarse and fine)
-            const totalFocus = (coarseFocus + fineFocus) / 2;
-            const focusPercentage = Math.round(totalFocus);
-            
-            // Remove existing blur classes
-            specimenContent.classList.remove('blur-light', 'blur-medium', 'blur-heavy', 'blur-extreme');
-            
-            // Apply blur based on focus distance from optimal (around 70-80)
-            const optimalFocus = 75;
-            const focusDistance = Math.abs(totalFocus - optimalFocus);
-            
-            if (focusDistance > 40) {
-                specimenContent.classList.add('blur-extreme');
-            } else if (focusDistance > 25) {
-                specimenContent.classList.add('blur-heavy');
-            } else if (focusDistance > 15) {
-                specimenContent.classList.add('blur-medium');
-            } else if (focusDistance > 5) {
-                specimenContent.classList.add('blur-light');
-            }
-            
-            // Update focus indicator
-            let focusStatus = 'Poor';
-            let focusColor = '#ef4444';
-            
-            if (focusDistance <= 5) {
-                focusStatus = 'Excellent';
-                focusColor = '#10b981';
-            } else if (focusDistance <= 15) {
-                focusStatus = 'Good';
-                focusColor = '#f59e0b';
-            } else if (focusDistance <= 25) {
-                focusStatus = 'Fair';
-                focusColor = '#f97316';
-            }
-            
-            focusIndicator.textContent = `Focus: ${focusStatus}`;
-            focusIndicator.style.color = focusColor;
-            
-            // Update brightness based on focus
-            const brightness = 0.7 + (totalFocus / 100) * 0.3;
-            specimenContent.style.filter = `brightness(${brightness})`;
-        }
-
-        // Initialize knob positions
-        window.addEventListener('load', () => {
+            updateFocus();
             updateKnobPosition('coarse');
+            updateVideoPlayback();
+        }, 50);
+
+        playSound('adjust');
+    }
+
+    function startFineAdjust(direction) {
+        if (adjustmentInterval) clearInterval(adjustmentInterval);
+        currentAdjustmentType = 'fine';
+
+        adjustmentInterval = setInterval(() => {
+            if (direction === 'up') {
+                fineFocus = Math.min(100, fineFocus + 0.5);
+                playForward(0.25); // slow speed
+            } else {
+                fineFocus = Math.max(0, fineFocus - 0.5);
+                playReverse(0.25); // slow speed reverse
+            }
+            updateFocus();
             updateKnobPosition('fine');
-        });
+            updateVideoPlayback();
+        }, 50);
 
-        // Touch support for mobile devices
-        document.addEventListener('touchstart', function(e) {
-            e.preventDefault();
-        }, { passive: false });
+        playSound('adjust');
+    }
 
-        // Prevent context menu on long press
-        document.addEventListener('contextmenu', function(e) {
-            e.preventDefault();
+    function stopAdjust() {
+        if (adjustmentInterval) {
+            clearInterval(adjustmentInterval);
+            adjustmentInterval = null;
+            currentAdjustmentType = null;
+
+            if (currentVideo) {
+                currentVideo.pause();
+                if (currentVideo.reverseInterval) clearInterval(currentVideo.reverseInterval);
+            }
+        }
+    }
+
+    function updateVideoPlayback() {
+        if (!currentVideo) return;
+
+        // Calculate video position based on focus
+        const totalFocus = (coarseFocus + fineFocus) / 2;
+        const videoPosition = totalFocus / 100;
+
+        // Set video time based on focus position
+        if (currentVideo.duration) {
+            currentVideo.currentTime = videoPosition * currentVideo.duration;
+        }
+    }
+
+    function updateKnobPosition(type) {
+        const handle = document.getElementById(type + 'Handle');
+        const value = type === 'coarse' ? coarseFocus : fineFocus;
+        const position = 80 - (value * 0.8); // Inverted slider
+        handle.style.top = position + 'px';
+    }
+
+    function updateFocus() {
+        const specimenContent = document.getElementById('specimenContent');
+        const focusIndicator = document.getElementById('focusIndicator');
+
+        // Calculate overall focus (combination of coarse and fine)
+        const totalFocus = (coarseFocus + fineFocus) / 2;
+        const focusPercentage = Math.round(totalFocus);
+
+        // Remove existing blur classes
+        specimenContent.classList.remove('blur-light', 'blur-medium', 'blur-heavy', 'blur-extreme');
+
+        // Apply blur based on focus distance from optimal (around 70-80)
+        const optimalFocus = 75;
+        const focusDistance = Math.abs(totalFocus - optimalFocus);
+
+        if (focusDistance > 40) {
+            specimenContent.classList.add('blur-extreme');
+        } else if (focusDistance > 25) {
+            specimenContent.classList.add('blur-heavy');
+        } else if (focusDistance > 15) {
+            specimenContent.classList.add('blur-medium');
+        } else if (focusDistance > 5) {
+            specimenContent.classList.add('blur-light');
+        }
+
+        // Update focus indicator
+        let focusStatus = 'Poor';
+        let focusColor = '#ef4444';
+
+        if (focusDistance <= 5) {
+            focusStatus = 'Excellent';
+            focusColor = '#10b981';
+        } else if (focusDistance <= 15) {
+            focusStatus = 'Good';
+            focusColor = '#f59e0b';
+        } else if (focusDistance <= 25) {
+            focusStatus = 'Fair';
+            focusColor = '#f97316';
+        }
+
+        focusIndicator.textContent = `Focus: ${focusStatus}`;
+        focusIndicator.style.color = focusColor;
+
+        // Update brightness based on focus
+        const brightness = 0.7 + (totalFocus / 100) * 0.3;
+        specimenContent.style.filter = `brightness(${brightness})`;
+    }
+
+    function switchObjective(objective) {
+        currentObjective = objective;
+
+        // Update active tab
+        document.querySelectorAll('.objective-tab').forEach(tab => {
+            tab.classList.remove('active');
         });
-    </script>
+        event.target.classList.add('active');
+
+        // Update magnification display
+        const config = magnifications[objective];
+        document.getElementById('magnificationDisplay').textContent = `Magnification: ${config.mag}`;
+
+        // Switch video source
+        if (currentVideo) {
+            if (currentVideo.reverseInterval) clearInterval(currentVideo.reverseInterval);
+            currentVideo.src = videoUrls[objective];
+            currentVideo.load();
+            currentVideo.currentTime = 0;
+        }
+
+        updateFocus();
+        playSound('click');
+    }
+
+    // Initialize knob positions
+    window.addEventListener('load', () => {
+        updateKnobPosition('coarse');
+        updateKnobPosition('fine');
+    });
+
+    // Touch support for mobile devices
+    document.addEventListener('touchstart', function(e) {
+        e.preventDefault();
+    }, { passive: false });
+
+    // Prevent context menu on long press
+    document.addEventListener('contextmenu', function(e) {
+        e.preventDefault();
+    });
+</script>
 </body>
 </html>
