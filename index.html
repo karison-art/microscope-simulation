@@ -1,0 +1,775 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Virtual Microscope Simulation</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Comic+Neue:wght@300;400;700&display=swap');
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Comic Neue', cursive;
+            background: linear-gradient(135deg, #9b59b6 0%, #8e44ad 25%, #e74c3c 50%, #f39c12 75%, #3498db 100%);
+            background-size: 400% 400%;
+            animation: gradientShift 8s ease infinite;
+            overflow-x: hidden;
+            user-select: none;
+        }
+
+        @keyframes gradientShift {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+
+        .container {
+            width: 100vw;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+
+        /* Phase 1 Styles - Fun and Colorful */
+        .phase1 {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            width: 100%;
+            position: relative;
+            padding: 20px;
+        }
+
+        .welcome-card {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 25px;
+            padding: 40px;
+            margin-bottom: 30px;
+            max-width: 800px;
+            box-shadow: 0 20px 40px rgba(155, 89, 182, 0.3);
+            border: 4px dashed #9b59b6;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .welcome-card::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: radial-gradient(circle, rgba(155, 89, 182, 0.1) 0%, transparent 70%);
+            animation: pulse 3s ease-in-out infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); opacity: 0.3; }
+            50% { transform: scale(1.1); opacity: 0.6; }
+        }
+
+        .welcome-content {
+            position: relative;
+            z-index: 2;
+        }
+
+        .welcome-title {
+            color: #8e44ad;
+            font-size: 32px;
+            font-weight: 700;
+            text-align: center;
+            margin-bottom: 20px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .welcome-subtitle {
+            color: #2c3e50;
+            font-size: 18px;
+            text-align: center;
+            margin-bottom: 25px;
+            line-height: 1.6;
+        }
+
+        .learn-list {
+            background: linear-gradient(45deg, #f8f9fa, #e9ecef);
+            border-radius: 15px;
+            padding: 20px;
+            margin: 20px 0;
+            border-left: 6px solid #e74c3c;
+        }
+
+        .learn-list h3 {
+            color: #e74c3c;
+            font-size: 20px;
+            margin-bottom: 15px;
+        }
+
+        .learn-list ul {
+            list-style: none;
+            padding-left: 0;
+        }
+
+        .learn-list li {
+            color: #2c3e50;
+            font-size: 16px;
+            margin: 10px 0;
+            position: relative;
+            padding-left: 30px;
+        }
+
+        .learn-list li::before {
+            content: '🔬';
+            position: absolute;
+            left: 0;
+            top: 0;
+        }
+
+        .preparation-steps {
+            background: linear-gradient(45deg, #fff3cd, #ffeaa7);
+            border-radius: 15px;
+            padding: 20px;
+            margin: 20px 0;
+            border-left: 6px solid #f39c12;
+        }
+
+        .preparation-steps h3 {
+            color: #f39c12;
+            font-size: 20px;
+            margin-bottom: 15px;
+        }
+
+        .preparation-steps ol {
+            color: #2c3e50;
+            font-size: 16px;
+            line-height: 1.6;
+            padding-left: 20px;
+        }
+
+        .preparation-steps li {
+            margin: 12px 0;
+            font-weight: 400;
+        }
+
+        .start-button {
+            background: linear-gradient(45deg, #e74c3c, #c0392b, #8e44ad, #9b59b6);
+            background-size: 300% 300%;
+            animation: gradientShift 3s ease infinite;
+            color: white;
+            padding: 25px 50px;
+            border: none;
+            border-radius: 50px;
+            font-size: 20px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 10px 30px rgba(231, 76, 60, 0.4);
+            z-index: 10;
+            position: relative;
+            font-family: 'Comic Neue', cursive;
+            border: 3px solid white;
+        }
+
+        .start-button:hover {
+            transform: translateY(-5px) scale(1.05);
+            box-shadow: 0 15px 40px rgba(231, 76, 60, 0.6);
+        }
+
+        .start-button:active {
+            transform: translateY(-2px) scale(1.02);
+        }
+
+        /* Floating doodle elements */
+        .doodle-element {
+            position: absolute;
+            opacity: 0.6;
+            animation: float 6s ease-in-out infinite;
+            pointer-events: none;
+        }
+
+        .doodle-element:nth-child(1) { top: 10%; left: 10%; animation-delay: 0s; }
+        .doodle-element:nth-child(2) { top: 20%; right: 15%; animation-delay: 1s; }
+        .doodle-element:nth-child(3) { bottom: 20%; left: 20%; animation-delay: 2s; }
+        .doodle-element:nth-child(4) { bottom: 10%; right: 10%; animation-delay: 3s; }
+
+        @keyframes float {
+            0%, 100% { transform: translateY(0px) rotate(0deg); }
+            33% { transform: translateY(-20px) rotate(5deg); }
+            66% { transform: translateY(10px) rotate(-3deg); }
+        }
+
+        /* Phase 2 Styles - Enhanced Purple Theme */
+        .phase2 {
+            display: none;
+            width: 100%;
+            height: 100vh;
+            flex-direction: column;
+            background: linear-gradient(135deg, #2c3e50 0%, #8e44ad 50%, #9b59b6 100%);
+            background-size: 400% 400%;
+            animation: gradientShift 10s ease infinite;
+        }
+
+        .simulation-header {
+            text-align: center;
+            padding: 20px;
+            color: white;
+            background: rgba(0,0,0,0.3);
+            position: relative;
+            z-index: 10;
+            border-bottom: 3px solid #e74c3c;
+        }
+
+        .simulation-header h1 {
+            font-size: 28px;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+            font-family: 'Comic Neue', cursive;
+        }
+
+        .simulation-header p {
+            font-size: 16px;
+            opacity: 0.9;
+        }
+
+        .main-interface {
+            display: flex;
+            flex: 1;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            padding: 20px;
+        }
+
+        .field-of-view {
+            width: min(60vh, 60vw);
+            height: min(60vh, 60vw);
+            border-radius: 50%;
+            background: #000;
+            position: relative;
+            overflow: hidden;
+            border: 8px solid #e74c3c;
+            box-shadow: 0 0 40px rgba(231, 76, 60, 0.8), inset 0 0 50px rgba(255,255,255,0.1);
+            animation: fieldGlow 2s ease-in-out infinite alternate;
+        }
+
+        @keyframes fieldGlow {
+            0% { box-shadow: 0 0 40px rgba(231, 76, 60, 0.8), inset 0 0 50px rgba(255,255,255,0.1); }
+            100% { box-shadow: 0 0 60px rgba(231, 76, 60, 1), inset 0 0 50px rgba(255,255,255,0.2); }
+        }
+
+        .field-canvas {
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            background: radial-gradient(circle, #1a1a1a 0%, #000 100%);
+        }
+
+        .control-panel {
+            position: absolute;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .control-panel.left {
+            left: 50px;
+        }
+
+        .control-panel.right {
+            right: 50px;
+        }
+
+        .knob-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 10px;
+            background: linear-gradient(145deg, rgba(155, 89, 182, 0.9), rgba(142, 68, 173, 0.9));
+            padding: 25px;
+            border-radius: 20px;
+            backdrop-filter: blur(15px);
+            border: 3px solid rgba(255, 255, 255, 0.3);
+            box-shadow: 0 10px 30px rgba(155, 89, 182, 0.4);
+        }
+
+        .knob-label {
+            color: white;
+            font-weight: 700;
+            text-align: center;
+            font-size: 16px;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.5);
+        }
+
+        .knob-controls {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .knob-button {
+            width: 60px;
+            height: 60px;
+            border: none;
+            border-radius: 50%;
+            background: linear-gradient(145deg, #e74c3c, #c0392b);
+            color: white;
+            font-size: 28px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            box-shadow: 0 6px 20px rgba(231, 76, 60, 0.4);
+            user-select: none;
+            border: 3px solid white;
+            font-weight: bold;
+        }
+
+        .knob-button:hover {
+            transform: scale(1.15);
+            box-shadow: 0 8px 25px rgba(231, 76, 60, 0.6);
+        }
+
+        .knob-button:active {
+            transform: scale(0.95);
+        }
+
+        .knob-indicator {
+            width: 80px;
+            height: 20px;
+            background: rgba(255,255,255,0.3);
+            border-radius: 15px;
+            position: relative;
+            margin: 15px 0;
+            border: 2px solid rgba(255,255,255,0.5);
+        }
+
+        .knob-handle {
+            width: 30px;
+            height: 30px;
+            background: linear-gradient(145deg, #f39c12, #e67e22);
+            border-radius: 50%;
+            position: absolute;
+            top: -5px;
+            left: 50%;
+            transform: translateX(-50%);
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(243, 156, 18, 0.6);
+            border: 2px solid white;
+        }
+
+        .objective-controls {
+            position: absolute;
+            top: 80px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 15px;
+            background: linear-gradient(145deg, rgba(155, 89, 182, 0.9), rgba(142, 68, 173, 0.9));
+            padding: 20px;
+            border-radius: 30px;
+            backdrop-filter: blur(15px);
+            z-index: 5;
+            border: 3px solid rgba(255, 255, 255, 0.3);
+            box-shadow: 0 10px 30px rgba(155, 89, 182, 0.4);
+        }
+
+        .objective-btn {
+            padding: 15px 25px;
+            border: none;
+            border-radius: 25px;
+            background: rgba(255,255,255,0.2);
+            color: white;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-weight: 700;
+            font-size: 14px;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            font-family: 'Comic Neue', cursive;
+        }
+
+        .objective-btn.active {
+            background: linear-gradient(45deg, #e74c3c, #c0392b);
+            box-shadow: 0 6px 20px rgba(231, 76, 60, 0.5);
+            transform: translateY(-2px);
+        }
+
+        .objective-btn:hover {
+            background: rgba(255,255,255,0.3);
+            transform: translateY(-3px);
+            box-shadow: 0 8px 25px rgba(255, 255, 255, 0.3);
+        }
+
+        .magnification-display {
+            position: absolute;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: linear-gradient(145deg, rgba(44, 62, 80, 0.9), rgba(52, 73, 94, 0.9));
+            color: white;
+            padding: 20px 40px;
+            border-radius: 30px;
+            font-size: 20px;
+            font-weight: 700;
+            backdrop-filter: blur(15px);
+            border: 3px solid rgba(231, 76, 60, 0.6);
+            box-shadow: 0 10px 30px rgba(44, 62, 80, 0.4);
+        }
+
+        .back-button {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            background: linear-gradient(145deg, #e74c3c, #c0392b);
+            color: white;
+            border: none;
+            padding: 15px 25px;
+            border-radius: 25px;
+            cursor: pointer;
+            font-weight: 700;
+            transition: all 0.3s ease;
+            z-index: 10;
+            border: 3px solid white;
+            font-family: 'Comic Neue', cursive;
+            font-size: 16px;
+        }
+
+        .back-button:hover {
+            background: linear-gradient(145deg, #c0392b, #a93226);
+            transform: translateY(-3px);
+            box-shadow: 0 8px 25px rgba(231, 76, 60, 0.5);
+        }
+
+        /* Mobile Responsive */
+        @media (max-width: 768px) {
+            .control-panel.left {
+                left: 10px;
+            }
+            .control-panel.right {
+                right: 10px;
+            }
+            .knob-container {
+                padding: 20px;
+            }
+            .knob-button {
+                width: 50px;
+                height: 50px;
+                font-size: 24px;
+            }
+            .welcome-card {
+                padding: 25px;
+                margin: 15px;
+            }
+            .welcome-title {
+                font-size: 24px;
+            }
+            .objective-controls {
+                top: 60px;
+                flex-wrap: wrap;
+            }
+        }
+
+        /* Loading and error states */
+        .loading-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(155, 89, 182, 0.9);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            color: white;
+            font-size: 18px;
+            text-align: center;
+        }
+
+        .spinner {
+            width: 50px;
+            height: 50px;
+            border: 5px solid rgba(255,255,255,0.3);
+            border-top: 5px solid white;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-bottom: 20px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Phase 1: Welcome Screen -->
+        <div class="phase1" id="phase1">
+            <!-- Floating doodle elements -->
+            <div class="doodle-element" style="font-size: 40px;">🔬</div>
+            <div class="doodle-element" style="font-size: 35px;">🧬</div>
+            <div class="doodle-element" style="font-size: 45px;">🦠</div>
+            <div class="doodle-element" style="font-size: 38px;">⚗️</div>
+
+            <div class="welcome-card">
+                <div class="welcome-content">
+                    <h1 class="welcome-title">Welcome to the Microscope Simulation!</h1>
+                    <p class="welcome-subtitle">Get ready to explore the hidden world of cells that you can't see with your eyes alone!</p>
+                    
+                    <div class="learn-list">
+                        <h3>In this simulation, you'll learn:</h3>
+                        <ul>
+                            <li>Difference between <strong>low, medium, and high-power magnification</strong></li>
+                            <li>How to focus the microscope to make things clearer</li>
+                            <li>How an onion cell looks on a real slide—just like in a science lab!</li>
+                        </ul>
+                    </div>
+
+                    <div class="preparation-steps">
+                        <h3>How Did We Get the Onion Cells?</h3>
+                        <p style="margin-bottom: 15px;">To prepare the slide you're about to see, we did the following steps:</p>
+                        <ol>
+                            <li>Took a <strong>thin piece of onion skin</strong> from the inside of an onion.</li>
+                            <li>Placed it on a <strong>clean glass slide</strong>.</li>
+                            <li>Added a <strong>drop of iodine</strong> to stain the cells (this makes them easier to see).</li>
+                            <li>Gently added a <strong>coverslip</strong> to hold everything in place and avoid air bubbles.</li>
+                        </ol>
+                        <p style="margin-top: 15px; font-weight: 600;">Now the slide is ready to be viewed under the microscope!</p>
+                    </div>
+                </div>
+            </div>
+            
+            <button class="start-button" onclick="startSimulation()">
+                🔬 Click the button to view! 🔬
+            </button>
+        </div>
+
+        <!-- Phase 2: Microscope Simulation -->
+        <div class="phase2" id="phase2">
+            <button class="back-button" onclick="goBack()">← Back to Welcome</button>
+            
+            <div class="simulation-header">
+                <h1>Virtual Microscope - Onion Cell Observation</h1>
+                <p>Use the adjustment knobs to focus and select objective lenses to change magnification</p>
+            </div>
+
+            <div class="objective-controls">
+                <button class="objective-btn active" onclick="setObjective('low', 10)">Low Power (10×)</button>
+                <button class="objective-btn" onclick="setObjective('medium', 40)">Medium Power (40×)</button>
+                <button class="objective-btn" onclick="setObjective('high', 100)">High Power (100×)</button>
+            </div>
+
+            <div class="main-interface">
+                <div class="control-panel left">
+                    <div class="knob-container">
+                        <div class="knob-label">Coarse<br>Adjustment</div>
+                        <div class="knob-controls">
+                            <button class="knob-button" onmousedown="startAdjustment('coarse', 'up')" onmouseup="stopAdjustment()" ontouchstart="startAdjustment('coarse', 'up')" ontouchend="stopAdjustment()">↑</button>
+                            <div class="knob-indicator">
+                                <div class="knob-handle" id="coarse-handle"></div>
+                            </div>
+                            <button class="knob-button" onmousedown="startAdjustment('coarse', 'down')" onmouseup="stopAdjustment()" ontouchstart="startAdjustment('coarse', 'down')" ontouchend="stopAdjustment()">↓</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="field-of-view">
+                    <canvas class="field-canvas" id="microscope-canvas"></canvas>
+                </div>
+
+                <div class="control-panel right">
+                    <div class="knob-container">
+                        <div class="knob-label">Fine<br>Adjustment</div>
+                        <div class="knob-controls">
+                            <button class="knob-button" onmousedown="startAdjustment('fine', 'up')" onmouseup="stopAdjustment()" ontouchstart="startAdjustment('fine', 'up')" ontouchend="stopAdjustment()">↑</button>
+                            <div class="knob-indicator">
+                                <div class="knob-handle" id="fine-handle"></div>
+                            </div>
+                            <button class="knob-button" onmousedown="startAdjustment('fine', 'down')" onmouseup="stopAdjustment()" ontouchstart="startAdjustment('fine', 'down')" ontouchend="stopAdjustment()">↓</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="magnification-display" id="magnification">
+                Magnification: 10×
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Microscope simulation variables
+        let currentObjective = 'low';
+        let currentMagnification = 10;
+        let adjustmentInterval = null;
+        let coarsePosition = 50;
+        let finePosition = 50;
+        let canvas, ctx;
+        let focusLevel = 0.5; // 0 = completely blurry, 1 = perfectly focused
+
+        // Simulated cell data for different magnifications
+        const cellData = {
+            low: {
+                cellSize: 20,
+                cellCount: 25,
+                detail: 'basic',
+                nucleusVisible: false
+            },
+            medium: {
+                cellSize: 35,
+                cellCount: 12,
+                detail: 'moderate',
+                nucleusVisible: true
+            },
+            high: {
+                cellSize: 80,
+                cellCount: 3,
+                detail: 'high',
+                nucleusVisible: true
+            }
+        };
+
+        function startSimulation() {
+            document.getElementById('phase1').style.display = 'none';
+            document.getElementById('phase2').style.display = 'flex';
+            
+            // Initialize canvas
+            initializeCanvas();
+            drawMicroscopeView();
+        }
+
+        function goBack() {
+            document.getElementById('phase2').style.display = 'none';
+            document.getElementById('phase1').style.display = 'flex';
+            stopAdjustment();
+        }
+
+        function initializeCanvas() {
+            canvas = document.getElementById('microscope-canvas');
+            ctx = canvas.getContext('2d');
+            
+            // Set canvas size to match container
+            const container = canvas.parentElement;
+            const size = Math.min(container.offsetWidth, container.offsetHeight);
+            canvas.width = size;
+            canvas.height = size;
+            
+            // Set canvas display size
+            canvas.style.width = '100%';
+            canvas.style.height = '100%';
+        }
+
+        function drawMicroscopeView() {
+            if (!ctx) return;
+            
+            const centerX = canvas.width / 2;
+            const centerY = canvas.height / 2;
+            const radius = Math.min(canvas.width, canvas.height) / 2;
+            
+            // Clear canvas
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            // Create circular clipping path
+            ctx.save();
+            ctx.beginPath();
+            ctx.arc(centerX, centerY, radius, 0, 2 * Math.PI);
+            ctx.clip();
+            
+            // Background gradient
+            const gradient = ctx.createRadialGradient(centerX, centerY, 0, centerX, centerY, radius);
+            gradient.addColorStop(0, '#f8f9fa');
+            gradient.addColorStop(0.7, '#e9ecef');
+            gradient.addColorStop(1, '#dee2e6');
+            ctx.fillStyle = gradient;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            // Draw onion cells based on current magnification
+            drawOnionCells();
+            
+            // Apply focus blur effect
+            if (focusLevel < 0.8) {
+                applyBlurEffect();
+            }
+            
+            ctx.restore();
+        }
+
+        function drawOnionCells() {
+            const data = cellData[currentObjective];
+            const centerX = canvas.width / 2;
+            const centerY = canvas.height / 2;
+            
+            // Calculate grid for cells
+            const cols = Math.ceil(Math.sqrt(data.cellCount));
+            const rows = Math.ceil(data.cellCount / cols);
+            const cellSpacing = data.cellSize * 1.2;
+            
+            let cellIndex = 0;
+            for (let row = 0; row < rows && cellIndex < data.cellCount; row++) {
+                for (let col = 0; col < cols && cellIndex < data.cellCount; col++) {
+                    const x = centerX + (col - cols/2 + 0.5) * cellSpacing + (Math.random() - 0.5) * 20;
+                    const y = centerY + (row - rows/2 + 0.5) * cellSpacing + (Math.random() - 0.5) * 20;
+                    
+                    drawSingleCell(x, y, data);
+                    cellIndex++;
+                }
+            }
+        }
+
+        function drawSingleCell(x, y, data) {
+            const size = data.cellSize + (Math.random() - 0.5) * data.cellSize * 0.3;
+            
+            // Cell wall (outer boundary)
+            ctx.strokeStyle = '#2c3e50';
+            ctx.lineWidth = Math.max(1, size / 20);
+            ctx.beginPath();
+            ctx.rect(x - size/2, y - size/2, size, size);
+            ctx.stroke();
+            
+            // Cell membrane (inner boundary) - slightly smaller
+            ctx.strokeStyle = '#34495e';
+            ctx.lineWidth = Math.max(0.5, size / 30);
+            ctx.beginPath();
+            ctx.rect(x - size/2 + 2, y - size/2 + 2, size - 4, size - 4);
+            ctx.stroke();
+            
+            // Cell interior with slight color variation
+            const colors = ['#f8f9fa', '#e9ecef', '#f1f3f4'];
+            ctx.fillStyle = colors[Math.floor(Math.random() * colors.length)];
+            ctx.fillRect(x - size/2 + 2, y - size/2 + 2, size - 4, size - 4);
+            
+            // Draw nucleus if visible at this magnification
+            if (data.nucleusVisible) {
+                const nucleusSize = size * 0.3;
+                const nucleusX = x + (Math.random() - 0.5) * size * 0.3;
+                const nucleusY = y + (Math.random() - 0.5) * size * 0.3;
+                
+                // Nucleus
+                ctx.fillStyle = '#8e44ad';
+                ctx.globalAlpha = 0.6;
+                ctx.beginPath();
+                ctx.arc(nucleusX, nucleusY, nucleusSize/2, 0, 2 * Math.PI);
+                ctx.fill();
+                ctx.globalAlpha = 1;
+                
+                // Nucleus outline
+                ctx.strokeStyle = '#9b59b6';
+                ctx.lineWidth = 1;
+                ctx.stroke();
+            }
+            
+            // Add cytoplasm details for higher magnifications
+            if (data.detail === 'high') {
+                // Add some organelles as small dots
+                for (let i = 0; i < 3; i++) {
+                    const orgX = x + (Math.random() - 0.5) * size * 0.6;
+                    const orgY = y + (Math.random() - 0.5) * size * 0.6
