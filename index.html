@@ -470,7 +470,7 @@
         </div>
 
         <div id="loadingIndicator" style="display:none; text-align:center; margin:20px 0;">
-        Loading video... <span class="loading"></span>
+        Loading... <span class="loading"></span>
     </div>
     <div class="magnification-display">
             <div class="magnification-label" id="magnificationLabel">
@@ -516,7 +516,7 @@
             
             video.addEventListener('error', function(e) {
                 console.error('Video loading error:', e);
-                alert('Error loading video. Please ensure video files are in the videos/ folder');
+                alert('Error loading. Please ensure video files are in the videos/ folder');
             });
             
             // Load the initial low power video
