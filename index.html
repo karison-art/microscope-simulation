@@ -436,7 +436,7 @@
             <div class="field-of-view">
                 <div class="field-content">
                     <video id="specimenVideo" class="specimen-video" muted preload="auto">
-                        <source src="https://raw.githubusercontent.com/microscope-simulation/videos/main/low_resolution.mp4" type="video/mp4">
+                        <source src="videos/res1.mp4" type="video/mp4">
                         Your browser does not support the video tag.
                     </video>
                 </div>
@@ -469,7 +469,10 @@
             </div>
         </div>
 
-        <div class="magnification-display">
+        <div id="loadingIndicator" style="display:none; text-align:center; margin:20px 0;">
+        Loading video... <span class="loading"></span>
+    </div>
+    <div class="magnification-display">
             <div class="magnification-label" id="magnificationLabel">
                 Magnification: 40×
             </div>
@@ -490,9 +493,9 @@
 
         // Video sources for different magnifications
         const videoSources = {
-            low: 'https://raw.githubusercontent.com/microscope-simulation/videos/main/low_resolution.mp4',
-            medium: 'https://raw.githubusercontent.com/microscope-simulation/videos/main/medium_resolution.mp4',
-            high: 'https://raw.githubusercontent.com/microscope-simulation/videos/main/high_resolution.mp4'
+            low: 'videos/res1.mp4',
+            medium: 'videos/res2.mp4', 
+            high: 'videos/res3.mp4'
         };
 
         /**
@@ -513,6 +516,7 @@
             
             video.addEventListener('error', function(e) {
                 console.error('Video loading error:', e);
+                alert('Error loading video. Please ensure video files are in the videos/ folder');
             });
             
             // Load the initial low power video
@@ -555,12 +559,17 @@
          */
         function loadVideo(objective) {
             if (video) {
+                document.getElementById('loadingIndicator').style.display = 'block';
                 video.src = videoSources[objective];
                 video.load(); // Load the new video source
                 
                 // Reset video to beginning and pause it
                 video.currentTime = 0;
                 video.pause();
+                
+                video.oncanplay = function() {
+                    document.getElementById('loadingIndicator').style.display = 'none';
+                };
             }
         }
 
