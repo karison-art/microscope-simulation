@@ -470,7 +470,7 @@
         </div>
 
         <div id="loadingIndicator" style="display:none; text-align:center; margin:20px 0;">
-        Loading... <span class="loading"></span>
+        Loading video... <span class="loading"></span>
     </div>
     <div class="magnification-display">
             <div class="magnification-label" id="magnificationLabel">
@@ -516,7 +516,7 @@
             
             video.addEventListener('error', function(e) {
                 console.error('Video loading error:', e);
-                alert('Error loading. Please ensure video files are in the videos/ folder');
+                alert('Error loading video. Please ensure video files are in the videos/ folder');
             });
             
             // Load the initial low power video
@@ -586,7 +586,12 @@
             adjustmentDirection = direction;
             
             // Start the animation loop for continuous adjustment
-            adjustFocus();
+            adjustFocus(); // This will now primarily update knob positions
+            
+            // Start video playback immediately
+            if (video && video.paused) {
+                video.play().catch(e => console.log('Video play error:', e));
+            }
         }
 
         /**
@@ -602,6 +607,10 @@
             // Pause the video when adjustment stops
             if (video && !video.paused) {
                 video.pause();
+            }
+            // Reset playback rate to normal (1.0) when stopped, in case it was negative
+            if (video) {
+                video.playbackRate = 1.0;
             }
         }
 
@@ -635,60 +644,36 @@
          */
         function controlVideoPlayback() {
             if (!video) return;
-            
-            // Calculate the target time based on focusLevel.
-            // We want the video to be perfectly focused at focusLevel = 50.
-            // So, 0-50 maps to 0-midpoint, and 50-100 maps to midpoint-end.
+
             const videoDuration = video.duration || 14; // Use 14s as default if duration not loaded yet
-            const midpoint = videoDuration / 2;
+            const basePlaybackRate = adjustmentType === 'fine' ? 0.25 : 1.0; // Slower for fine, faster for coarse
 
-            let targetTime;
-            if (focusLevel <= 50) {
-                // From 0 to 50, map to 0 to midpoint
-                targetTime = (focusLevel / 50) * midpoint;
-            } else {
-                // From 50 to 100, map to midpoint to end
-                targetTime = midpoint + ((focusLevel - 50) / 50) * midpoint;
-            }
-
-            // Set playback rate based on adjustment type
-            const playbackRate = adjustmentType === 'fine' ? 0.25 : 1.0;
-            video.playbackRate = playbackRate;
-
-            // Determine if we need to play forward or backward
-            // This logic is simplified for continuous adjustment.
-            // For a more precise "focus" effect, you'd map focusLevel to a specific frame/time.
-            // Here, we're making the video play forward when adjusting "up" and backward when "down".
-
-            if (adjustmentDirection === 'up') {
-                // Play forward towards the targetTime
+            if (adjustmentDirection === 'down') {
+                // Play forward
+                video.playbackRate = basePlaybackRate;
                 if (video.paused) {
                     video.play().catch(e => console.log('Video play error:', e));
                 }
-                // Ensure video progresses towards targetTime, but don't jump
-                if (video.currentTime < targetTime) {
-                    // Allow natural play
-                } else {
-                    // If already past target, pause or slow down
-                    video.pause(); // Or set playbackRate to 0
-                }
-            } else { // adjustmentDirection === 'down'
-                // Play backward towards the targetTime
-                if (!video.paused) {
+                // Ensure video doesn't go past its end
+                if (video.currentTime >= videoDuration) {
                     video.pause();
+                    video.currentTime = videoDuration; // Clamp to end
                 }
-                const step = adjustmentType === 'fine' ? 0.02 : 0.1;
-                video.currentTime = Math.max(0, video.currentTime - step);
+            } else if (adjustmentDirection === 'up') {
+                // Play backward
+                video.playbackRate = -basePlaybackRate; // Set negative playback rate for reverse
+                if (video.paused) {
+                    video.play().catch(e => console.log('Video play error:', e));
+                }
+                // Ensure video doesn't go before its start
+                if (video.currentTime <= 0) {
+                    video.pause();
+                    video.currentTime = 0; // Clamp to beginning
+                }
             }
-
-            // A more robust focus simulation would involve:
-            // 1. Having a "focused" video segment (e.g., middle 2 seconds).
-            // 2. Playing a "blurry" video segment before and after the focused segment.
-            // 3. `focusLevel` would then control which segment is visible.
-            // The current implementation uses the video's time to simulate focus,
-            // where different parts of the video represent different focus states.
-            // The provided videos are likely already designed to show blur/focus across their timeline.
-            video.currentTime = targetTime; // Directly set current time to simulate focus
+            // The video's natural playback will handle the continuous movement.
+            // No need to manually set video.currentTime here in the loop for continuous play.
+            // The focusLevel and knob positions will still update visually.
         }
 
 
