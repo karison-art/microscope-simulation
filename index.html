@@ -612,9 +612,8 @@
         function adjustFocus() {
             if (!isAdjusting || !video) return;
             
-            // Determine adjustment speed based on knob type
-            const speed = adjustmentType === 'fine' ? 0.5 : 2;
-            const directionMultiplier = adjustmentDirection === 'up' ? 1 : -1;
+            const speed = adjustmentType === 'fine' ? 0.8 : 2.5;
+            const directionMultiplier = adjustmentDirection === 'up' ? -1 : 1;
             
             // Update focus level, clamping between 0 and 100
             focusLevel += directionMultiplier * speed;
@@ -677,18 +676,19 @@
                 if (!video.paused) {
                     video.pause();
                 }
-                const step = adjustmentType === 'fine' ? 0.02 : 0.1;
-                video.currentTime = Math.max(0, video.currentTime - step);
+                // Set the current time to simulate focus
+    video.currentTime = targetTime;
+    if (adjustmentDirection === 'up') {
+        // Play backward from current position (without restarting)
+        if (!video.paused) {
+            video.pause();
+        }
+        const step = adjustmentType === 'fine' ? 0.03 : 0.15;
+        video.currentTime = Math.max(0, video.currentTime - step);
             }
 
-            // A more robust focus simulation would involve:
-            // 1. Having a "focused" video segment (e.g., middle 2 seconds).
-            // 2. Playing a "blurry" video segment before and after the focused segment.
-            // 3. `focusLevel` would then control which segment is visible.
-            // The current implementation uses the video's time to simulate focus,
-            // where different parts of the video represent different focus states.
-            // The provided videos are likely already designed to show blur/focus across their timeline.
-            video.currentTime = targetTime; // Directly set current time to simulate focus
+            // Play normally from the target time
+            video.currentTime = targetTime;
         }
 
 
