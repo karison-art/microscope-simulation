@@ -1,0 +1,554 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Virtual Microscope Simulation</title>
+    <link href="https://fonts.googleapis.com/css2?family=Fredoka+One:wght@400&family=Nunito:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Nunito', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        /* Phase 1 Styles */
+        .phase1-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            padding: 20px;
+            text-align: center;
+            color: white;
+        }
+
+        .phase1-title {
+            font-family: 'Fredoka One', cursive;
+            font-size: clamp(2rem, 5vw, 3.5rem);
+            margin-bottom: 20px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+            animation: bounce 2s ease-in-out infinite;
+        }
+
+        @keyframes bounce {
+            0%, 20%, 50%, 80%, 100% { transform: translateY(0); }
+            40% { transform: translateY(-10px); }
+            60% { transform: translateY(-5px); }
+        }
+
+        .phase1-content {
+            max-width: 800px;
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 30px;
+            margin-bottom: 30px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .phase1-content h3 {
+            font-size: 1.5rem;
+            margin-bottom: 15px;
+            color: #FFE4E1;
+        }
+
+        .phase1-content ul {
+            text-align: left;
+            margin: 15px 0;
+            padding-left: 20px;
+        }
+
+        .phase1-content li {
+            margin-bottom: 8px;
+            font-size: 1.1rem;
+        }
+
+        .start-button {
+            background: linear-gradient(45deg, #FF6B6B, #4ECDC4);
+            border: none;
+            padding: 15px 40px;
+            font-size: 1.2rem;
+            font-weight: 700;
+            color: white;
+            border-radius: 50px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 8px 20px rgba(0,0,0,0.2);
+            font-family: 'Nunito', sans-serif;
+        }
+
+        .start-button:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 12px 25px rgba(0,0,0,0.3);
+        }
+
+        /* Phase 2 Styles */
+        .phase2-container {
+            display: none;
+            min-height: 100vh;
+            padding: 10px;
+            position: relative;
+        }
+
+        .phase2-header {
+            text-align: center;
+            margin-bottom: 20px;
+            position: relative;
+        }
+
+        .simulation-title {
+            font-family: 'Fredoka One', cursive;
+            font-size: clamp(1.5rem, 4vw, 2.5rem);
+            color: white;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+            margin: 10px 0;
+        }
+
+        .back-button {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            background: rgba(255, 255, 255, 0.2);
+            border: none;
+            padding: 10px 15px;
+            border-radius: 25px;
+            color: white;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+
+        .back-button:hover {
+            background: rgba(255, 255, 255, 0.3);
+            transform: translateX(-5px);
+        }
+
+        .objective-tabs {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            margin: 20px 0;
+            flex-wrap: wrap;
+        }
+
+        .objective-tab {
+            background: rgba(255, 255, 255, 0.2);
+            border: 2px solid transparent;
+            padding: 12px 20px;
+            border-radius: 25px;
+            color: white;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            font-size: clamp(0.9rem, 2vw, 1.1rem);
+        }
+
+        .objective-tab.active {
+            background: rgba(255, 255, 255, 0.3);
+            border-color: rgba(255, 255, 255, 0.5);
+            transform: scale(1.05);
+        }
+
+        .objective-tab:hover {
+            background: rgba(255, 255, 255, 0.25);
+        }
+
+        .microscope-interface {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 20px;
+            margin: 20px 0;
+            flex-wrap: wrap;
+        }
+
+        .field-of-view {
+            width: min(75vw, 75vh);
+            height: min(75vw, 75vh);
+            max-width: 500px;
+            max-height: 500px;
+            background: #000;
+            border-radius: 50%;
+            border: 8px solid rgba(255, 255, 255, 0.3);
+            overflow: hidden;
+            position: relative;
+            box-shadow: 0 0 30px rgba(0,0,0,0.5), inset 0 0 20px rgba(255,255,255,0.1);
+        }
+
+        .field-video {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            position: absolute;
+            top: 0;
+            left: 0;
+        }
+
+        .adjustment-knob {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 15px;
+            padding: 20px;
+            margin: 10px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .knob-label {
+            color: white;
+            font-weight: 700;
+            margin-bottom: 15px;
+            text-align: center;
+            font-size: clamp(0.9rem, 2vw, 1.1rem);
+        }
+
+        .knob-control {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .knob-button {
+            background: linear-gradient(45deg, #FF6B6B, #4ECDC4);
+            border: none;
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            color: white;
+            font-size: 1.5rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            user-select: none;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+        }
+
+        .knob-button:hover {
+            transform: scale(1.1);
+        }
+
+        .knob-button:active {
+            transform: scale(0.95);
+            box-shadow: 0 2px 5px rgba(0,0,0,0.3);
+        }
+
+        .knob-slider {
+            width: 8px;
+            height: 100px;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 4px;
+            position: relative;
+            margin: 10px 0;
+        }
+
+        .knob-thumb {
+            width: 20px;
+            height: 20px;
+            background: linear-gradient(45deg, #FF6B6B, #4ECDC4);
+            border-radius: 50%;
+            position: absolute;
+            left: -6px;
+            top: 40px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+        }
+
+        .magnification-display {
+            text-align: center;
+            margin-top: 20px;
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 15px;
+            padding: 15px 30px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .magnification-label {
+            color: white;
+            font-size: clamp(1.2rem, 3vw, 1.8rem);
+            font-weight: 700;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.3);
+        }
+
+        /* Mobile Responsiveness */
+        @media (max-width: 768px) {
+            .microscope-interface {
+                flex-direction: column;
+                gap: 15px;
+            }
+            
+            .adjustment-knob {
+                flex-direction: row;
+                padding: 15px;
+                width: 90%;
+                max-width: 300px;
+            }
+            
+            .knob-control {
+                flex-direction: row;
+                gap: 15px;
+            }
+            
+            .knob-slider {
+                width: 100px;
+                height: 8px;
+                margin: 0 10px;
+            }
+            
+            .knob-thumb {
+                width: 20px;
+                height: 20px;
+                top: -6px;
+                left: 40px;
+            }
+            
+            .objective-tabs {
+                margin: 15px 0;
+            }
+        }
+
+        .hidden {
+            display: none !important;
+        }
+    </style>
+</head>
+<body>
+    <!-- Phase 1: Introduction -->
+    <div class="phase1-container" id="phase1">
+        <h1 class="phase1-title">🔬 Welcome to the Microscope Simulation! 🔬</h1>
+        
+        <div class="phase1-content">
+            <h3>🌟 Get ready to explore the hidden world of cells!</h3>
+            <p style="font-size: 1.1rem; margin-bottom: 20px;">
+                In this simulation, you'll learn:
+            </p>
+            
+            <ul>
+                <li>Difference between low, medium, and high-power magnification</li>
+                <li>How to focus the microscope to make things clearer</li>
+                <li>How an onion cell looks on a real slide—just like in a science lab!</li>
+            </ul>
+            
+            <h3 style="margin-top: 25px;">🧅 How Did We Get the Onion Cells?</h3>
+            <p style="margin-bottom: 15px;">To prepare the slide you're about to see, we did the following steps:</p>
+            
+            <ol style="text-align: left; padding-left: 20px;">
+                <li style="margin-bottom: 8px;">Took a thin piece of onion skin from the inside of an onion.</li>
+                <li style="margin-bottom: 8px;">Placed it on a clean glass slide.</li>
+                <li style="margin-bottom: 8px;">Added a drop of iodine to stain the cells (this makes them easier to see).</li>
+                <li style="margin-bottom: 8px;">Gently added a coverslip to hold everything in place and avoid air bubbles.</li>
+            </ol>
+            
+            <p style="font-size: 1.2rem; font-weight: 700; margin-top: 20px; color: #FFE4E1;">
+                Now the slide is ready to be viewed under the microscope! 🎉
+            </p>
+        </div>
+        
+        <button class="start-button" onclick="startSimulation()">
+            🔬 Start Microscope Simulation
+        </button>
+    </div>
+
+    <!-- Phase 2: Microscope Interface -->
+    <div class="phase2-container" id="phase2">
+        <div class="phase2-header">
+            <button class="back-button" onclick="goBack()">← Back</button>
+            <h1 class="simulation-title">🧅 ONION CELL UNDER A LIGHT MICROSCOPE</h1>
+            
+            <div class="objective-tabs">
+                <div class="objective-tab active" onclick="selectObjective('low', this)">
+                    Low Power (20×)
+                </div>
+                <div class="objective-tab" onclick="selectObjective('medium', this)">
+                    Medium Power (40×)
+                </div>
+                <div class="objective-tab" onclick="selectObjective('high', this)">
+                    High Power (100×)
+                </div>
+            </div>
+        </div>
+
+        <div class="microscope-interface">
+            <!-- Fine Adjustment Knob -->
+            <div class="adjustment-knob">
+                <div class="knob-label">Fine<br>Adjustment</div>
+                <div class="knob-control">
+                    <button class="knob-button" onmousedown="startFineAdjustment('up')" onmouseup="stopAdjustment()" ontouchstart="startFineAdjustment('up')" ontouchend="stopAdjustment()">▲</button>
+                    <div class="knob-slider">
+                        <div class="knob-thumb" id="fineThumb"></div>
+                    </div>
+                    <button class="knob-button" onmousedown="startFineAdjustment('down')" onmouseup="stopAdjustment()" ontouchstart="startFineAdjustment('down')" ontouchend="stopAdjustment()">▼</button>
+                </div>
+            </div>
+
+            <!-- Field of View -->
+            <div class="field-of-view">
+                <video class="field-video" id="microscopeVideo" muted loop>
+                    <source src="https://github.com/karison-art/microscope-simulation/raw/main/res1.mp4" type="video/mp4">
+                    Your browser does not support the video tag.
+                </video>
+            </div>
+
+            <!-- Coarse Adjustment Knob -->
+            <div class="adjustment-knob">
+                <div class="knob-label">Coarse<br>Adjustment</div>
+                <div class="knob-control">
+                    <button class="knob-button" onmousedown="startCoarseAdjustment('up')" onmouseup="stopAdjustment()" ontouchstart="startCoarseAdjustment('up')" ontouchend="stopAdjustment()">▲</button>
+                    <div class="knob-slider">
+                        <div class="knob-thumb" id="coarseThumb"></div>
+                    </div>
+                    <button class="knob-button" onmousedown="startCoarseAdjustment('down')" onmouseup="stopAdjustment()" ontouchstart="startCoarseAdjustment('down')" ontouchend="stopAdjustment()">▼</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="magnification-display">
+            <div class="magnification-label" id="magnificationLabel">Magnification: 20×</div>
+        </div>
+    </div>
+
+    <script>
+        let currentObjective = 'low';
+        let adjustmentInterval = null;
+        let currentVideoTime = 0;
+        let isPlaying = false;
+        let playbackRate = 1;
+
+        const videoSources = {
+            low: 'https://github.com/karison-art/microscope-simulation/raw/main/res1.mp4',
+            medium: 'https://github.com/karison-art/microscope-simulation/raw/main/res2.mp4',
+            high: 'https://github.com/karison-art/microscope-simulation/raw/main/res3.mp4'
+        };
+
+        const magnifications = {
+            low: '20×',
+            medium: '40×',
+            high: '100×'
+        };
+
+        function startSimulation() {
+            document.getElementById('phase1').style.display = 'none';
+            document.getElementById('phase2').style.display = 'block';
+            
+            // Initialize video
+            const video = document.getElementById('microscopeVideo');
+            video.load();
+            video.addEventListener('loadeddata', function() {
+                video.currentTime = 0;
+            });
+        }
+
+        function goBack() {
+            document.getElementById('phase2').style.display = 'none';
+            document.getElementById('phase1').style.display = 'flex';
+            
+            // Stop any ongoing adjustments
+            stopAdjustment();
+        }
+
+        function selectObjective(objective, element) {
+            // Remove active class from all tabs
+            document.querySelectorAll('.objective-tab').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            
+            // Add active class to selected tab
+            element.classList.add('active');
+            
+            // Update current objective
+            currentObjective = objective;
+            
+            // Change video source
+            const video = document.getElementById('microscopeVideo');
+            video.src = videoSources[objective];
+            video.load();
+            video.currentTime = currentVideoTime;
+            
+            // Update magnification label
+            document.getElementById('magnificationLabel').textContent = `Magnification: ${magnifications[objective]}`;
+        }
+
+        function startCoarseAdjustment(direction) {
+            stopAdjustment(); // Stop any existing adjustment
+            
+            const video = document.getElementById('microscopeVideo');
+            playbackRate = 1; // Normal speed for coarse adjustment
+            
+            adjustmentInterval = setInterval(() => {
+                if (direction === 'up') {
+                    video.currentTime = Math.min(video.currentTime + 0.1, video.duration);
+                    moveThumb('coarseThumb', 'up');
+                } else {
+                    video.currentTime = Math.max(video.currentTime - 0.1, 0);
+                    moveThumb('coarseThumb', 'down');
+                }
+                currentVideoTime = video.currentTime;
+            }, 100);
+        }
+
+        function startFineAdjustment(direction) {
+            stopAdjustment(); // Stop any existing adjustment
+            
+            const video = document.getElementById('microscopeVideo');
+            playbackRate = 0.25; // Slow motion for fine adjustment
+            
+            adjustmentInterval = setInterval(() => {
+                if (direction === 'up') {
+                    video.currentTime = Math.min(video.currentTime + 0.025, video.duration);
+                    moveThumb('fineThumb', 'up');
+                } else {
+                    video.currentTime = Math.max(video.currentTime - 0.025, 0);
+                    moveThumb('fineThumb', 'down');
+                }
+                currentVideoTime = video.currentTime;
+            }, 100);
+        }
+
+        function stopAdjustment() {
+            if (adjustmentInterval) {
+                clearInterval(adjustmentInterval);
+                adjustmentInterval = null;
+            }
+        }
+
+        function moveThumb(thumbId, direction) {
+            const thumb = document.getElementById(thumbId);
+            const currentTop = parseInt(thumb.style.top) || 40;
+            
+            if (direction === 'up') {
+                thumb.style.top = Math.max(0, currentTop - 2) + 'px';
+            } else {
+                thumb.style.top = Math.min(80, currentTop + 2) + 'px';
+            }
+        }
+
+        // Prevent context menu on touch devices
+        document.addEventListener('contextmenu', function(e) {
+            e.preventDefault();
+        });
+
+        // Initialize on load
+        window.addEventListener('load', function() {
+            // Set initial video time to 0
+            const video = document.getElementById('microscopeVideo');
+            video.addEventListener('loadeddata', function() {
+                video.currentTime = 0;
+                currentVideoTime = 0;
+            });
+        });
+    </script>
+</body>
+</html>
