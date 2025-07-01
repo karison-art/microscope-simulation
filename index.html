@@ -224,6 +224,8 @@
             transform: scale(0.95);
         }
 
+        /* Removed .knob-slider and .knob-handle styles as they are no longer needed */
+        /*
         .knob-slider {
             width: 6px;
             height: 100px;
@@ -235,11 +237,11 @@
         .knob-handle {
             width: 20px;
             height: 20px;
-            background: linear-gradient(45deg, #9c27b0, #673ab7); /* Handle purple gradient */
+            background: linear-gradient(45deg, #9c27b0, #673ab7);
             border-radius: 50%;
             position: absolute;
             left: -7px;
-            top: 40px; /* Initial position */
+            top: 40px;
             cursor: grab;
             transition: all 0.2s ease;
             box-shadow: 0 2px 10px rgba(0,0,0,0.3);
@@ -249,6 +251,7 @@
             cursor: grabbing;
             transform: scale(1.1);
         }
+        */
 
         .field-of-view {
             width: 400px;
@@ -418,9 +421,7 @@
                             ontouchend="stopFocusing()">
                         ▲
                     </button>
-                    <div class="knob-slider">
-                        <div class="knob-handle" id="fineHandle"></div>
-                    </div>
+                    <!-- Removed the knob-slider div -->
                     <button class="scroll-button" 
                             onmousedown="startFocusing('fine', 'down')" 
                             onmouseup="stopFocusing()" 
@@ -454,9 +455,7 @@
                             ontouchend="stopFocusing()">
                         ▲
                     </button>
-                    <div class="knob-slider">
-                        <div class="knob-handle" id="coarseHandle"></div>
-                    </div>
+                    <!-- Removed the knob-slider div -->
                     <button class="scroll-button" 
                             onmousedown="startFocusing('coarse', 'down')" 
                             onmouseup="stopFocusing()" 
@@ -588,8 +587,8 @@
             // Start the animation loop for continuous adjustment
             adjustFocus(); // This will now primarily update knob positions
             
-            // Start video playback immediately
-            if (video && video.paused) {
+            // Start video playback immediately (only for forward play)
+            if (video && video.paused && adjustmentDirection === 'down') {
                 video.play().catch(e => console.log('Video play error:', e));
             }
         }
@@ -622,15 +621,16 @@
             if (!isAdjusting || !video) return;
             
             // Determine adjustment speed based on knob type
+            // The focusLevel variable is no longer directly tied to video.currentTime
+            // but can still be used for other visual feedback if desired.
             const speed = adjustmentType === 'fine' ? 0.5 : 2;
             const directionMultiplier = adjustmentDirection === 'up' ? 1 : -1;
             
-            // Update focus level, clamping between 0 and 100
             focusLevel += directionMultiplier * speed;
             focusLevel = Math.max(0, Math.min(100, focusLevel));
             
-            // Update the visual position of the knob handles
-            updateKnobPositions();
+            // No longer calling updateKnobPositions() as there are no handles to update
+            // updateKnobPositions(); 
             
             // Control video playback based on focus level and adjustment type/direction
             controlVideoPlayback();
@@ -647,6 +647,7 @@
 
             const videoDuration = video.duration || 14; // Use 14s as default if duration not loaded yet
             const basePlaybackRate = adjustmentType === 'fine' ? 0.25 : 1.0; // Slower for fine, faster for coarse
+            const step = adjustmentType === 'fine' ? 0.05 : 0.2; // Smaller step for fine, larger for coarse for manual reverse
 
             if (adjustmentDirection === 'down') {
                 // Play forward
@@ -660,26 +661,24 @@
                     video.currentTime = videoDuration; // Clamp to end
                 }
             } else if (adjustmentDirection === 'up') {
-                // Play backward
-                video.playbackRate = -basePlaybackRate; // Set negative playback rate for reverse
-                if (video.paused) {
-                    video.play().catch(e => console.log('Video play error:', e));
+                // Play backward by manually decrementing currentTime
+                if (!video.paused) {
+                    video.pause(); // Pause natural forward/reverse playback if it was playing
                 }
-                // Ensure video doesn't go before its start
-                if (video.currentTime <= 0) {
-                    video.pause();
-                    video.currentTime = 0; // Clamp to beginning
+
+                // Calculate new time, ensuring it doesn't go below 0
+                let newTime = video.currentTime - step;
+                if (newTime < 0) {
+                    newTime = 0;
+                    stopFocusing(); // Stop adjusting if we hit the beginning
                 }
+                video.currentTime = newTime;
             }
-            // The video's natural playback will handle the continuous movement.
-            // No need to manually set video.currentTime here in the loop for continuous play.
-            // The focusLevel and knob positions will still update visually.
         }
 
 
-        /**
-         * Updates the visual position of the fine and coarse adjustment knob handles.
-         */
+        // Removed updateKnobPositions() function as it's no longer needed
+        /*
         function updateKnobPositions() {
             const fineHandle = document.getElementById('fineHandle');
             const coarseHandle = document.getElementById('coarseHandle');
@@ -691,12 +690,13 @@
             fineHandle.style.top = `${position}px`;
             coarseHandle.style.top = `${position}px`;
         }
+        */
 
         // Initialize when the page loads
         window.addEventListener('load', function() {
             console.log('Microscope simulation loaded.');
-            // Set initial knob positions
-            updateKnobPositions();
+            // No longer calling updateKnobPositions() on load as there are no handles to update
+            // updateKnobPositions();
         });
     </script>
 </body>
